@@ -6,7 +6,7 @@
 
 Reference web editor for the [Open Coaching Format](https://github.com/opencoachingformat/spec) — an open standard for basketball drill diagrams and animations.
 
-**Live demo:** https://opencoachingformat.github.io/editor
+**Live demo:** https://opencoachingformat.github.io/ocf-editor
 
 ---
 
