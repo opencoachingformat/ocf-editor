@@ -1,0 +1,453 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>OCF Editor — Open Coaching Format</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@400;500;600;700&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body class="editor-mode">
+
+  <!-- Header -->
+  <header id="app-header">
+    <div class="header-left">
+      <div class="app-brand">
+        <svg class="brand-icon" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="1.5"/>
+          <path d="M12 2 C12 2 8 7 8 12 C8 17 12 22 12 22" stroke="currentColor" stroke-width="1.5"/>
+          <path d="M12 2 C12 2 16 7 16 12 C16 17 12 22 12 22" stroke="currentColor" stroke-width="1.5"/>
+          <path d="M2 12 L22 12" stroke="currentColor" stroke-width="1.5"/>
+        </svg>
+        <h1 class="app-title">OCF<span class="app-title-thin">editor</span></h1>
+      </div>
+      <span class="app-version">v0.1.0</span>
+    </div>
+    <div class="header-center">
+      <div class="hdr-group">
+        <button id="btn-undo" class="hdr-btn icon-btn" title="Undo (Ctrl+Z)">
+          <svg viewBox="0 0 16 16" fill="none"><path d="M3 7H10C11.657 7 13 8.343 13 10C13 11.657 11.657 13 10 13H7" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/><path d="M5 5L3 7L5 9" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </button>
+        <button id="btn-redo" class="hdr-btn icon-btn" title="Redo (Ctrl+Shift+Z)">
+          <svg viewBox="0 0 16 16" fill="none"><path d="M13 7H6C4.343 7 3 8.343 3 10C3 11.657 4.343 13 6 13H9" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/><path d="M11 5L13 7L11 9" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </button>
+      </div>
+      <div class="hdr-divider"></div>
+      <div class="hdr-group">
+        <button id="btn-import" class="hdr-btn" title="Import OCF JSON">
+          <svg viewBox="0 0 16 16" fill="none"><path d="M3 11V13H13V11" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/><path d="M8 2V10M5 7L8 10L11 7" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          Import
+        </button>
+        <button id="btn-export" class="hdr-btn primary" title="Export OCF JSON">
+          <svg viewBox="0 0 16 16" fill="none"><path d="M3 11V13H13V11" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/><path d="M8 10V2M5 5L8 2L11 5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          Export
+        </button>
+      </div>
+      <div class="hdr-divider"></div>
+      <button id="btn-json-toggle" class="hdr-btn" title="Toggle JSON Panel">
+        <svg viewBox="0 0 16 16" fill="none"><path d="M6 4L3 8L6 12M10 4L13 8L10 12" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        JSON
+      </button>
+    </div>
+    <div class="header-right">
+      <button id="mode-toggle" class="hdr-btn mode-btn">
+        <svg viewBox="0 0 16 16" fill="none"><path d="M8 2L8 14M2 8L14 8" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" opacity="0.4"/><circle cx="8" cy="8" r="3" stroke="currentColor" stroke-width="1.5"/></svg>
+        Viewer
+      </button>
+    </div>
+  </header>
+
+  <!-- Main Layout -->
+  <div id="app-layout">
+
+    <!-- Left Sidebar -->
+    <aside id="left-sidebar" class="sidebar">
+
+      <!-- Toolbar div kept for JS compat, hidden -->
+      <div id="toolbar" style="display:none"></div>
+
+      <!-- Entity Palette -->
+      <div id="palette" class="panel">
+        <div class="panel-header">
+          <span class="panel-title">Entities</span>
+        </div>
+        <div class="palette-section">
+          <div class="palette-section-label">Players</div>
+          <button class="palette-item pal-offense" draggable="true" title="Add Offense Player">
+            <span class="pal-token offense-token">O</span>
+            <span class="pal-label">Offense</span>
+            <kbd class="pal-hint">drag</kbd>
+          </button>
+          <button class="palette-item pal-defense" draggable="true" title="Add Defense Player">
+            <span class="pal-token defense-token">D</span>
+            <span class="pal-label">Defense</span>
+            <kbd class="pal-hint">drag</kbd>
+          </button>
+          <button class="palette-item pal-coach" draggable="true" title="Add Coach">
+            <span class="pal-token coach-token">C</span>
+            <span class="pal-label">Coach</span>
+            <kbd class="pal-hint">drag</kbd>
+          </button>
+        </div>
+        <div class="palette-section">
+          <div class="palette-section-label">Equipment</div>
+          <button class="palette-item pal-cone" draggable="true" title="Add Cone">
+            <span class="pal-token cone-token">▲</span>
+            <span class="pal-label">Cone</span>
+            <kbd class="pal-hint">drag</kbd>
+          </button>
+          <button class="palette-item pal-station" draggable="true" title="Add Station">
+            <span class="pal-token station-token">■</span>
+            <span class="pal-label">Station</span>
+            <kbd class="pal-hint">drag</kbd>
+          </button>
+        </div>
+      </div>
+
+      <!-- How to use hint -->
+      <div class="panel toolbar-hint-panel">
+        <div class="hint-step">① Drag entities onto the court</div>
+        <div class="hint-step">② Click a player → choose action</div>
+        <div class="hint-step">③ Click target or double-click to finish</div>
+        <div class="hint-step">④ Press <kbd>▶</kbd> to advance frame</div>
+      </div>
+
+    </aside>
+
+    <!-- Center: Court Canvas -->
+    <main id="center-area">
+      <div id="svg-container">
+        <!-- Demo court SVG (will be replaced by ocf-bundle.js at runtime) -->
+        <svg id="court-svg" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 500 460">
+          <defs>
+            <!-- Wood grain pattern -->
+            <pattern id="wood-grain" patternUnits="userSpaceOnUse" width="500" height="4">
+              <rect width="500" height="4" fill="#c8874a"/>
+              <rect y="0.5" width="500" height="0.8" fill="#d4945a" opacity="0.6"/>
+              <rect y="2.2" width="500" height="0.5" fill="#b87840" opacity="0.4"/>
+              <rect y="3.2" width="500" height="0.4" fill="#d09050" opacity="0.3"/>
+            </pattern>
+            <pattern id="wood-board" patternUnits="userSpaceOnUse" width="42" height="4">
+              <rect width="42" height="4" fill="url(#wood-grain)"/>
+              <rect x="0" width="0.6" height="4" fill="#a06830" opacity="0.35"/>
+              <rect x="41.4" width="0.6" height="4" fill="#a06830" opacity="0.35"/>
+            </pattern>
+            <!-- Drop shadow for players -->
+            <filter id="player-shadow" x="-30%" y="-30%" width="160%" height="160%">
+              <feDropShadow dx="0" dy="2" stdDeviation="3" flood-color="#000" flood-opacity="0.5"/>
+            </filter>
+            <!-- Glow for selected -->
+            <filter id="player-glow">
+              <feGaussianBlur stdDeviation="4" result="blur"/>
+              <feComposite in="SourceGraphic" in2="blur" operator="over"/>
+            </filter>
+            <marker id="arrow-pass" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto">
+              <path d="M0,0 L0,6 L8,3 z" fill="#f97316" opacity="0.9"/>
+            </marker>
+            <marker id="arrow-move" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto">
+              <path d="M0,0 L0,6 L8,3 z" fill="#60a5fa" opacity="0.9"/>
+            </marker>
+          </defs>
+
+          <!-- Court surface -->
+          <rect x="0" y="0" width="500" height="460" fill="url(#wood-board)"/>
+
+          <!-- Court boundary -->
+          <rect x="8" y="8" width="484" height="444" fill="none" stroke="#7a4f28" stroke-width="2.5" rx="1"/>
+
+          <!-- Half-court line -->
+          <line x1="8" y1="8" x2="492" y2="8" stroke="#7a4f28" stroke-width="2"/>
+
+          <!-- Center circle partial (top) -->
+          <path d="M 188 8 A 62 62 0 0 1 312 8" fill="none" stroke="#7a4f28" stroke-width="2"/>
+
+          <!-- Paint / key area -->
+          <!-- Paint box: width 160px (3.2m equiv), height 190px -->
+          <rect x="170" y="270" width="160" height="190" fill="none" stroke="#7a4f28" stroke-width="2"/>
+          <!-- Outer lane lines (wider box) -->
+          <rect x="130" y="270" width="240" height="190" fill="none" stroke="#7a4f28" stroke-width="1.5"/>
+
+          <!-- Free throw line -->
+          <line x1="130" y1="270" x2="370" y2="270" stroke="#7a4f28" stroke-width="2"/>
+
+          <!-- Free throw circle -->
+          <circle cx="250" cy="270" r="62" fill="none" stroke="#7a4f28" stroke-width="2" stroke-dasharray="0"/>
+          <!-- Upper half of FT circle (dashed) -->
+          <path d="M 188 270 A 62 62 0 0 0 312 270" fill="none" stroke="#7a4f28" stroke-width="2" stroke-dasharray="6 5"/>
+
+          <!-- Restricted area (no charge arc) -->
+          <path d="M 218 460 A 32 32 0 0 1 282 460" fill="none" stroke="#7a4f28" stroke-width="2"/>
+
+          <!-- Basket backboard -->
+          <line x1="218" y1="430" x2="282" y2="430" stroke="#7a4f28" stroke-width="3"/>
+          <!-- Basket -->
+          <circle cx="250" cy="440" r="18" fill="none" stroke="#7a4f28" stroke-width="2.5"/>
+          <circle cx="250" cy="440" r="4" fill="#7a4f28" opacity="0.5"/>
+
+          <!-- 3-point arc -->
+          <!-- Corner 3-pt lines -->
+          <line x1="32" y1="370" x2="32" y2="460" stroke="#7a4f28" stroke-width="2"/>
+          <line x1="468" y1="370" x2="468" y2="460" stroke="#7a4f28" stroke-width="2"/>
+          <!-- 3-point arc -->
+          <path d="M 32 370 A 218 218 0 0 1 468 370" fill="none" stroke="#7a4f28" stroke-width="2"/>
+
+          <!-- ============ DEMO PLAYERS & LINES ============ -->
+
+          <!-- Pass line from O1 (has ball) to O2 -->
+          <path d="M 180 320 Q 250 250 310 290"
+                fill="none" stroke="#f97316" stroke-width="2"
+                stroke-dasharray="8 5" stroke-linecap="round"
+                marker-end="url(#arrow-pass)" opacity="0.85"/>
+
+          <!-- Movement line for O2 -->
+          <path d="M 390 200 L 310 290"
+                fill="none" stroke="#60a5fa" stroke-width="2"
+                stroke-dasharray="0" stroke-linecap="round"
+                marker-end="url(#arrow-move)" opacity="0.7"/>
+
+          <!-- === OFFENSE PLAYER 1 (has ball) === -->
+          <g filter="url(#player-shadow)">
+            <circle cx="180" cy="320" r="22" fill="#1e3a8a" stroke="#60a5fa" stroke-width="2.5"/>
+            <text x="180" y="326" text-anchor="middle" fill="#ffffff"
+                  font-family="'Barlow Condensed', sans-serif"
+                  font-size="15" font-weight="700" letter-spacing="0.5">O1</text>
+            <!-- Has-ball badge -->
+            <circle cx="196" cy="304" r="9" fill="#f97316" stroke="#1e3a8a" stroke-width="1.5"/>
+            <text x="196" y="308" text-anchor="middle" fill="white"
+                  font-size="9" font-family="sans-serif">🏀</text>
+          </g>
+
+          <!-- === OFFENSE PLAYER 2 === -->
+          <g filter="url(#player-shadow)">
+            <circle cx="310" cy="290" r="22" fill="#1e3a8a" stroke="#60a5fa" stroke-width="2.5"/>
+            <text x="310" y="296" text-anchor="middle" fill="#ffffff"
+                  font-family="'Barlow Condensed', sans-serif"
+                  font-size="15" font-weight="700" letter-spacing="0.5">O2</text>
+          </g>
+
+          <!-- === OFFENSE PLAYER 3 === -->
+          <g filter="url(#player-shadow)">
+            <circle cx="390" cy="200" r="22" fill="#1e3a8a" stroke="#60a5fa" stroke-width="2.5"/>
+            <text x="390" y="206" text-anchor="middle" fill="#ffffff"
+                  font-family="'Barlow Condensed', sans-serif"
+                  font-size="15" font-weight="700" letter-spacing="0.5">O3</text>
+          </g>
+
+          <!-- === DEFENSE PLAYER 1 === -->
+          <g filter="url(#player-shadow)">
+            <circle cx="270" cy="360" r="22" fill="#7f1d1d" stroke="#f87171" stroke-width="2.5"/>
+            <text x="270" y="366" text-anchor="middle" fill="#ffffff"
+                  font-family="'Barlow Condensed', sans-serif"
+                  font-size="15" font-weight="700" letter-spacing="0.5">D1</text>
+          </g>
+
+          <!-- === DEFENSE PLAYER 2 === -->
+          <g filter="url(#player-shadow)">
+            <circle cx="350" cy="310" r="22" fill="#7f1d1d" stroke="#f87171" stroke-width="2.5"/>
+            <text x="350" y="316" text-anchor="middle" fill="#ffffff"
+                  font-family="'Barlow Condensed', sans-serif"
+                  font-size="15" font-weight="700" letter-spacing="0.5">D2</text>
+          </g>
+
+          <!-- === TRANSITION PLAYER (role switch) === -->
+          <g filter="url(#player-shadow)">
+            <circle cx="110" cy="230" r="22" fill="#78350f" stroke="#fbbf24" stroke-width="2.5" stroke-dasharray="4 2"/>
+            <text x="110" y="236" text-anchor="middle" fill="#fef3c7"
+                  font-family="'Barlow Condensed', sans-serif"
+                  font-size="15" font-weight="700" letter-spacing="0.5">O4</text>
+          </g>
+          <!-- Transition label -->
+          <text x="110" y="260" text-anchor="middle" fill="#fbbf24"
+                font-family="'DM Sans', sans-serif"
+                font-size="9" opacity="0.8">SWITCH</text>
+        </svg>
+      </div>
+
+      <!-- Player / Frame Controls -->
+      <div id="player-controls">
+        <!-- Normal navigation (hidden while drawing) -->
+        <div id="player-nav" class="player-nav-group">
+          <button id="btn-prev" class="player-btn" title="Previous Frame">
+            <svg viewBox="0 0 14 14" fill="none"><path d="M9 2L4 7L9 12" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          </button>
+          <span id="frame-label" class="frame-label">Step 1</span>
+          <span class="ctrl-sep"></span>
+          <span id="frame-counter" class="frame-counter">1 / 1</span>
+          <button id="btn-play" class="player-btn play-btn" title="Play/Pause" style="display:none">
+            <svg viewBox="0 0 14 14" fill="none"><path d="M4 2L12 7L4 12V2Z" fill="currentColor"/></svg>
+          </button>
+          <button id="btn-next" class="player-btn" title="Next Frame">
+            <svg viewBox="0 0 14 14" fill="none"><path d="M5 2L10 7L5 12" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          </button>
+          <span id="frame-desc" class="frame-desc"></span>
+        </div>
+
+        <!-- Draw confirm bar (shown while line is being drawn) -->
+        <div id="draw-confirm-bar" class="draw-confirm-bar hidden">
+          <span class="draw-confirm-hint">
+            <svg viewBox="0 0 14 14" fill="none" width="12" height="12"><circle cx="7" cy="7" r="6" stroke="currentColor" stroke-width="1.2"/><path d="M7 4v3.5l2 1.5" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/></svg>
+            Click waypoints, then
+          </span>
+          <button id="btn-draw-confirm" class="draw-btn draw-btn-confirm" title="Confirm line (Enter)">
+            <svg viewBox="0 0 14 14" fill="none" width="13" height="13"><path d="M2 7L5.5 10.5L12 3" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            Confirm
+          </button>
+          <button id="btn-draw-cancel" class="draw-btn draw-btn-cancel" title="Cancel (Escape)">
+            <svg viewBox="0 0 14 14" fill="none" width="13" height="13"><path d="M2 2L12 12M12 2L2 12" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+            Cancel
+          </button>
+        </div>
+      </div>
+    </main>
+
+    <!-- Right Sidebar -->
+    <aside id="right-sidebar" class="sidebar">
+
+      <!-- Properties Panel -->
+      <div id="properties" class="panel">
+        <div class="panel-header">
+          <span class="panel-title">Drill Settings</span>
+        </div>
+
+        <div class="prop-group">
+          <label class="prop-label" for="prop-title">Title</label>
+          <input type="text" id="prop-title" class="prop-input" value="Pick &amp; Roll" placeholder="Drill name…">
+        </div>
+
+        <div class="prop-group">
+          <label class="prop-label" for="prop-desc">Description</label>
+          <textarea id="prop-desc" class="prop-input" rows="2" placeholder="Describe this drill…">Ball handler uses screen, reads the roll man.</textarea>
+        </div>
+
+        <div class="prop-row-2">
+          <div class="prop-group">
+            <label class="prop-label" for="prop-author">Author</label>
+            <input type="text" id="prop-author" class="prop-input" value="Coach Meyer" placeholder="Author…">
+          </div>
+          <div class="prop-group">
+            <label class="prop-label" for="prop-diff">Difficulty</label>
+            <select id="prop-diff" class="prop-input prop-select">
+              <option>beginner</option>
+              <option selected>intermediate</option>
+              <option>advanced</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="prop-row-2">
+          <div class="prop-group">
+            <label class="prop-label" for="prop-ruleset">Ruleset</label>
+            <select id="prop-ruleset" class="prop-input prop-select">
+              <option selected>fiba</option>
+              <option>nba</option>
+              <option>ncaa</option>
+              <option>nfhs</option>
+            </select>
+          </div>
+          <div class="prop-group">
+            <label class="prop-label" for="prop-court">Court</label>
+            <select id="prop-court" class="prop-input prop-select">
+              <option selected>half_court</option>
+              <option>full_court</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="prop-row-2">
+          <div class="prop-group">
+            <label class="prop-label" for="prop-focus">Focus</label>
+            <select id="prop-focus" class="prop-input prop-select">
+              <option selected>offense</option>
+              <option>defense</option>
+              <option>transition</option>
+              <option>neutral</option>
+            </select>
+          </div>
+          <div class="prop-group">
+            <label class="prop-label" for="prop-tags">Tags</label>
+            <input type="text" id="prop-tags" class="prop-input" value="p&r, screening" placeholder="tag1, tag2…">
+          </div>
+        </div>
+      </div>
+
+      <!-- Frames Panel -->
+      <div id="frames" class="panel">
+        <div class="panel-header">
+          <span class="panel-title">Frames</span>
+          <button class="frames-add-btn" title="Add Frame">+</button>
+        </div>
+        <div class="frames-list">
+          <div class="frame-item active">
+            <div class="frame-dot"></div>
+            <span class="frame-item-label">Step 1</span>
+            <span class="frame-badge">2L</span>
+            <button class="frame-rm-btn" title="Remove frame">×</button>
+          </div>
+          <div class="frame-item">
+            <div class="frame-dot"></div>
+            <span class="frame-item-label">Step 2</span>
+            <span class="frame-badge">3L</span>
+            <button class="frame-rm-btn" title="Remove frame">×</button>
+          </div>
+          <div class="frame-item">
+            <div class="frame-dot"></div>
+            <span class="frame-item-label">Step 3</span>
+            <span class="frame-badge">1L</span>
+            <button class="frame-rm-btn" title="Remove frame">×</button>
+          </div>
+        </div>
+        <div class="frame-edit">
+          <input type="text" class="prop-input" placeholder="Frame label…" value="Step 1">
+          <textarea class="prop-input" rows="2" placeholder="Describe this step…">Ball handler dribbles off screen</textarea>
+        </div>
+      </div>
+
+    </aside>
+
+    <!-- JSON Panel (toggleable) -->
+    <aside id="json-panel" class="hidden">
+      <div class="json-header">
+        <span>JSON Output</span>
+        <button class="json-close-btn" id="btn-json-close">×</button>
+      </div>
+      <textarea id="json-textarea" readonly spellcheck="false">{
+  "ocf_version": "1.0.0",
+  "ruleset": "fiba",
+  "court": {
+    "type": "half_court"
+  },
+  "metadata": {
+    "title": "Pick &amp; Roll",
+    "author": "Coach Meyer",
+    "difficulty": "intermediate"
+  },
+  "entities": {
+    "offense_1": { "type": "offense", "x": -2.8, "y": 4.8, "has_ball": true },
+    "offense_2": { "type": "offense", "x": 1.2, "y": 5.6 },
+    "offense_3": { "type": "offense", "x": 5.0, "y": 8.2 },
+    "defense_1": { "type": "defense", "x": 0.4, "y": 3.2 },
+    "defense_2": { "type": "defense", "x": 2.5, "y": 4.8 }
+  },
+  "frames": [
+    {
+      "label": "Step 1",
+      "description": "Ball handler dribbles off screen",
+      "lines": [
+        {
+          "type": "passing",
+          "from": "offense_1",
+          "to": "offense_2"
+        }
+      ]
+    }
+  ]
+}</textarea>
+    </aside>
+
+  </div>
+
+  <script src="ocf-bundle.js?v=3"></script>
+</body>
+</html>

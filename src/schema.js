@@ -1,0 +1,451 @@
+/**
+ * Embedded OCF v1.0.0 JSON Schema and utilities.
+ *
+ * INTENTIONAL DEVIATIONS FROM SPEC (opencoachingformat/spec schema/v1.json):
+ *
+ * 1. meta.created / meta.modified: spec uses { "type": "string", "format": "date-time" }
+ *    Editor uses { "type": "string" } without format keyword.
+ *    Reason: ajv strict-mode rejects unknown format keywords unless formats plugin is loaded.
+ *    The date-time format is cosmetic for this editor use case.
+ *
+ * 2. meta.source_url: spec uses { "type": "string", "format": "uri" }
+ *    Editor uses { "type": "string" } without format keyword.
+ *    Reason: same as above — ajv strict-mode compatibility.
+ */
+
+export const OCF_SCHEMA = {
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://opencoachingformat.org/schema/v1.json",
+  "title": "Open Coaching Format",
+  "description": "Open standard for basketball drill diagrams and animations. v1.0.0",
+  "type": "object",
+  "required": ["meta", "court", "entities", "frames"],
+  "definitions": {
+    "ruleset": {
+      "type": "string",
+      "enum": ["fiba", "nba", "ncaa", "nfhs", "custom"],
+      "description": "Basketball ruleset. Determines unit, field dimensions and named position coordinates."
+    },
+    "unit": {
+      "type": "string",
+      "enum": ["m", "ft"],
+      "description": "Length unit used for all coordinates in this document. Derived from ruleset unless custom."
+    },
+    "coordinate_free": {
+      "type": "object",
+      "description": "Absolute coordinate in court units. Origin at center of court (midcourt center). x: negative=viewer's left, positive=viewer's right. y: positive=frontcourt (offense basket), negative=backcourt (defense basket).",
+      "required": ["x", "y"],
+      "properties": { "x": { "type": "number" }, "y": { "type": "number" } },
+      "additionalProperties": false
+    },
+    "coordinate_named": {
+      "type": "object",
+      "description": "Reference to a named court position. Standard positions are resolved via the active ruleset. Custom positions are prefixed with 'custom.'",
+      "required": ["named"],
+      "properties": {
+        "named": {
+          "type": "string",
+          "description": "Name of a standard or custom court position. Custom positions use 'custom.' prefix (e.g. 'custom.dunker_spot').",
+          "examples": [
+            "basket", "left_block", "right_block", "left_elbow", "right_elbow",
+            "free_throw_line", "paint_center", "top_of_the_key",
+            "left_wing", "right_wing", "left_corner", "right_corner",
+            "left_short_corner", "right_short_corner",
+            "high_post_left", "high_post_right",
+            "midcourt.center", "midcourt.left", "midcourt.right",
+            "backcourt.basket", "backcourt.left_block", "backcourt.right_block",
+            "backcourt.left_elbow", "backcourt.right_elbow", "backcourt.free_throw_line",
+            "backcourt.top_of_the_key", "backcourt.left_wing", "backcourt.right_wing",
+            "backcourt.left_corner", "backcourt.right_corner",
+            "inbound.baseline_left", "inbound.baseline_right", "inbound.baseline_center",
+            "inbound.sideline_left_fc", "inbound.sideline_right_fc",
+            "inbound.sideline_left_mid", "inbound.sideline_right_mid",
+            "inbound.sideline_left_bc", "inbound.sideline_right_bc",
+            "custom.dunker_spot", "custom.nail"
+          ]
+        }
+      },
+      "additionalProperties": false
+    },
+    "coordinate_relative": {
+      "type": "object",
+      "description": "Position defined as offset from a named court position. dx/dy are in the document's court unit.",
+      "required": ["relative_to", "dx", "dy"],
+      "properties": {
+        "relative_to": { "type": "string", "description": "Name of the base named position (standard or custom.*)." },
+        "dx": { "type": "number", "description": "Horizontal offset. Positive = viewer's right." },
+        "dy": { "type": "number", "description": "Vertical offset. Positive = toward offense basket." }
+      },
+      "additionalProperties": false
+    },
+    "coordinate": {
+      "description": "A single point in the court coordinate system. One of: absolute, named, or relative.",
+      "oneOf": [
+        { "$ref": "#/definitions/coordinate_free" },
+        { "$ref": "#/definitions/coordinate_named" },
+        { "$ref": "#/definitions/coordinate_relative" }
+      ]
+    },
+    "entity_ref": {
+      "type": "string",
+      "description": "Natural key reference to an entity. Format: '{type}_{nr}' for players (e.g. 'offense_1', 'defense_3'), or 'ball', 'coach', 'cone_1', 'station_1'.",
+      "pattern": "^(offense|defense)_[1-9]$|^(ball|coach)$|^(cone|station)_[1-9][0-9]*$"
+    },
+    "color_role": {
+      "type": "string",
+      "enum": ["offense", "defense", "black", "grey", "yellow", "green", "red", "blue", "white"],
+      "description": "Semantic color role. Resolved to hex via the document's color_scheme."
+    },
+    "entity_offense": {
+      "type": "object",
+      "description": "Offensive player.",
+      "required": ["type", "nr", "x", "y"],
+      "properties": {
+        "type": { "type": "string", "const": "offense" },
+        "nr": { "type": "integer", "minimum": 1, "maximum": 9, "description": "Player number 1–9." },
+        "x": { "type": "number" },
+        "y": { "type": "number" },
+        "rotation": { "type": "number", "minimum": 0, "maximum": 360, "default": 0 },
+        "color": { "$ref": "#/definitions/color_role", "default": "offense" },
+        "label": { "type": "string", "description": "Optional override label instead of number." }
+      },
+      "additionalProperties": false
+    },
+    "entity_defense": {
+      "type": "object",
+      "description": "Defensive player.",
+      "required": ["type", "nr", "x", "y"],
+      "properties": {
+        "type": { "type": "string", "const": "defense" },
+        "nr": { "type": "integer", "minimum": 1, "maximum": 9, "description": "Player number 1–9." },
+        "x": { "type": "number" },
+        "y": { "type": "number" },
+        "rotation": { "type": "number", "minimum": 0, "maximum": 360, "default": 0 },
+        "color": { "$ref": "#/definitions/color_role", "default": "defense" },
+        "label": { "type": "string" }
+      },
+      "additionalProperties": false
+    },
+    "entity_ball": {
+      "type": "object",
+      "description": "Basketball. At most one ball per frame.",
+      "required": ["type", "x", "y"],
+      "properties": {
+        "type": { "type": "string", "const": "ball" },
+        "x": { "type": "number" },
+        "y": { "type": "number" }
+      },
+      "additionalProperties": false
+    },
+    "entity_coach": {
+      "type": "object",
+      "description": "Coach position marker.",
+      "required": ["type", "x", "y"],
+      "properties": {
+        "type": { "type": "string", "const": "coach" },
+        "x": { "type": "number" },
+        "y": { "type": "number" }
+      },
+      "additionalProperties": false
+    },
+    "entity_cone": {
+      "type": "object",
+      "description": "Training cone / marker.",
+      "required": ["type", "nr", "x", "y"],
+      "properties": {
+        "type": { "type": "string", "const": "cone" },
+        "nr": { "type": "integer", "minimum": 1, "description": "Cone number for referencing." },
+        "x": { "type": "number" },
+        "y": { "type": "number" }
+      },
+      "additionalProperties": false
+    },
+    "entity_station": {
+      "type": "object",
+      "description": "Numbered station for circuit training.",
+      "required": ["type", "nr", "x", "y"],
+      "properties": {
+        "type": { "type": "string", "const": "station" },
+        "nr": { "type": "integer", "minimum": 1 },
+        "label": { "type": "string", "description": "Station description (e.g. 'Rebound jumps')." },
+        "x": { "type": "number" },
+        "y": { "type": "number" }
+      },
+      "additionalProperties": false
+    },
+    "entity": {
+      "description": "Any entity that can appear on the court.",
+      "oneOf": [
+        { "$ref": "#/definitions/entity_offense" },
+        { "$ref": "#/definitions/entity_defense" },
+        { "$ref": "#/definitions/entity_ball" },
+        { "$ref": "#/definitions/entity_coach" },
+        { "$ref": "#/definitions/entity_cone" },
+        { "$ref": "#/definitions/entity_station" }
+      ]
+    },
+    "line": {
+      "type": "object",
+      "description": "A movement line connecting positions on the court.",
+      "required": ["type", "coords"],
+      "properties": {
+        "type": {
+          "type": "string",
+          "enum": ["movement", "passing", "dribbling", "screen", "line", "free"],
+          "description": "movement=cut (solid+arrow), passing=dashed+arrow, dribbling=wave+arrow, screen=solid+crossbar, line=plain, free=freehand simplified."
+        },
+        "curved": { "type": "boolean", "default": true, "description": "Whether waypoints are interpolated as quadratic bezier curves (FIBA default: true)." },
+        "color": { "$ref": "#/definitions/color_role", "default": "black" },
+        "from_entity": { "$ref": "#/definitions/entity_ref", "description": "Optional reference to the entity this line originates from." },
+        "to_entity": { "$ref": "#/definitions/entity_ref", "description": "Optional reference to the entity this line points to." },
+        "coords": {
+          "type": "array",
+          "description": "Ordered waypoints of the path. Minimum 2 points.",
+          "minItems": 2,
+          "items": { "$ref": "#/definitions/coordinate" }
+        }
+      },
+      "additionalProperties": false
+    },
+    "area": {
+      "type": "object",
+      "description": "Highlighted zone on the court.",
+      "required": ["form", "x", "y"],
+      "properties": {
+        "form": {
+          "type": "string",
+          "enum": ["rectangle", "ellipse", "triangle"],
+          "description": "Shape of the highlighted area."
+        },
+        "color": { "$ref": "#/definitions/color_role", "default": "yellow" },
+        "opacity": { "type": "number", "minimum": 0, "maximum": 1, "default": 0.4 },
+        "x": { "type": "number", "description": "Center x (rectangle/ellipse) or ignored for triangle." },
+        "y": { "type": "number", "description": "Center y (rectangle/ellipse) or ignored for triangle." },
+        "width": { "type": "number", "description": "Required for rectangle and ellipse." },
+        "height": { "type": "number", "description": "Required for rectangle and ellipse." },
+        "rotation": { "type": "number", "minimum": 0, "maximum": 360, "default": 0 },
+        "coords": {
+          "type": "array",
+          "description": "Required for triangle: exactly 3 coordinates.",
+          "minItems": 3,
+          "maxItems": 3,
+          "items": { "$ref": "#/definitions/coordinate" }
+        }
+      },
+      "additionalProperties": false
+    },
+    "label": {
+      "type": "object",
+      "description": "Free text label on the court.",
+      "required": ["text", "x", "y"],
+      "properties": {
+        "text": { "type": "string" },
+        "x": { "type": "number" },
+        "y": { "type": "number" },
+        "color": { "$ref": "#/definitions/color_role", "default": "black" }
+      },
+      "additionalProperties": false
+    },
+    "frame": {
+      "type": "object",
+      "description": "A single step/phase of the drill. The first frame defines initial positions. Subsequent frames carry delta entity_states and their own lines.",
+      "required": ["id", "lines"],
+      "properties": {
+        "id": { "type": "string", "description": "Unique identifier for this frame within the drill." },
+        "label": { "type": "string", "description": "Short display label (e.g. 'Step 1', 'Phase A')." },
+        "description": { "type": "string", "description": "Human-readable coaching instruction for this step. LLMs should generate this field." },
+        "duration_ms": { "type": "integer", "minimum": 0, "description": "Suggested animation duration for this frame in milliseconds." },
+        "entity_states": {
+          "type": "object",
+          "description": "Delta positions for entities that move in this frame. Key is entity_ref. Entities not listed retain their previous position.",
+          "additionalProperties": {
+            "type": "object",
+            "required": ["x", "y"],
+            "properties": {
+              "x": { "type": "number" },
+              "y": { "type": "number" }
+            },
+            "additionalProperties": false
+          }
+        },
+        "lines": {
+          "type": "array",
+          "description": "Movement lines active in this frame.",
+          "items": { "$ref": "#/definitions/line" }
+        }
+      },
+      "additionalProperties": false
+    },
+    "custom_position": {
+      "type": "object",
+      "description": "A user-defined named court position.",
+      "required": ["x", "y"],
+      "properties": {
+        "x": { "type": "number" },
+        "y": { "type": "number" },
+        "description": { "type": "string" }
+      },
+      "additionalProperties": false
+    },
+    "color_scheme": {
+      "type": "object",
+      "description": "Hex color values for each semantic role. All values must meet WCAG AA contrast ratio of 4.5:1 against their rendering context. WCAG AAA (7:1) is recommended. Default values are the FIBA color scheme.",
+      "properties": {
+        "offense_fill":   { "type": "string", "pattern": "^#[0-9a-fA-F]{6}$", "default": "#003366" },
+        "offense_stroke": { "type": "string", "pattern": "^#[0-9a-fA-F]{6}$", "default": "#ffffff" },
+        "defense_fill":   { "type": "string", "pattern": "^#[0-9a-fA-F]{6}$", "default": "#58001d" },
+        "defense_stroke": { "type": "string", "pattern": "^#[0-9a-fA-F]{6}$", "default": "#ffffff" },
+        "black":          { "type": "string", "pattern": "^#[0-9a-fA-F]{6}$", "default": "#000000" },
+        "grey":           { "type": "string", "pattern": "^#[0-9a-fA-F]{6}$", "default": "#7f7f7f" },
+        "yellow":         { "type": "string", "pattern": "^#[0-9a-fA-F]{6}$", "default": "#ffff00" },
+        "green":          { "type": "string", "pattern": "^#[0-9a-fA-F]{6}$", "default": "#7ce86a" },
+        "red":            { "type": "string", "pattern": "^#[0-9a-fA-F]{6}$", "default": "#ff0000" },
+        "blue":           { "type": "string", "pattern": "^#[0-9a-fA-F]{6}$", "default": "#5dd5ff" },
+        "white":          { "type": "string", "pattern": "^#[0-9a-fA-F]{6}$", "default": "#ffffff" }
+      },
+      "additionalProperties": false
+    }
+  },
+  "properties": {
+    "$schema": {
+      "type": "string",
+      "description": "URI reference to the OCF JSON Schema version used."
+    },
+    "meta": {
+      "type": "object",
+      "description": "Drill metadata.",
+      "required": ["id", "title"],
+      "properties": {
+        "id": { "type": "string", "description": "Universally unique identifier for this drill." },
+        "title": { "type": "string", "description": "Display name of the drill." },
+        "description": { "type": "string", "description": "Full coaching description of the drill." },
+        "author": { "type": "string" },
+        "tags": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "Searchable tags (e.g. 'pick-and-roll', 'transition', 'u12')."
+        },
+        "difficulty": { "type": "string", "enum": ["beginner", "intermediate", "advanced"] },
+        "created": { "type": "string" },   // intentional: no format:"date-time" — ajv strict-mode
+        "modified": { "type": "string" },  // intentional: no format:"date-time" — ajv strict-mode
+        "source_format": {
+          "type": "string",
+          "enum": ["fiba", "fastdraw", "open", "custom"],
+          "description": "Original format if this document was imported or converted."
+        },
+        "source_url": { "type": "string" } // intentional: no format:"uri" — ajv strict-mode
+      },
+      "additionalProperties": false
+    },
+    "court": {
+      "type": "object",
+      "description": "Court configuration.",
+      "required": ["ruleset", "type"],
+      "properties": {
+        "ruleset": { "$ref": "#/definitions/ruleset" },
+        "type": {
+          "type": "string",
+          "enum": ["half_court", "full_court"],
+          "description": "half_court renders y=0 to +max. full_court renders y=-max to +max."
+        },
+        "drill_focus": {
+          "type": "string",
+          "enum": ["offense", "defense", "transition", "neutral"],
+          "description": "Semantic intent of the drill. 'transition' implies full court. Positive y is always the primary offense direction.",
+          "default": "offense"
+        },
+        "wheelchair": {
+          "type": "boolean",
+          "default": false,
+          "description": "Use wheelchair basketball symbol variants."
+        },
+        "custom_dimensions": {
+          "type": "object",
+          "description": "Required when ruleset is 'custom'. All values in the unit field.",
+          "required": ["unit", "length", "width", "basket_from_baseline", "three_point_distance", "paint_width", "paint_depth", "free_throw_distance"],
+          "properties": {
+            "unit": { "$ref": "#/definitions/unit" },
+            "length": { "type": "number", "description": "Full court length." },
+            "width": { "type": "number", "description": "Full court width." },
+            "basket_from_baseline": { "type": "number" },
+            "three_point_distance": { "type": "number", "description": "Distance from basket to 3-point arc top." },
+            "paint_width": { "type": "number" },
+            "paint_depth": { "type": "number" },
+            "free_throw_distance": { "type": "number", "description": "Distance from basket to free throw line." }
+          },
+          "additionalProperties": false
+        }
+      },
+      "additionalProperties": false
+    },
+    "color_scheme": {
+      "$ref": "#/definitions/color_scheme",
+      "description": "Optional color overrides. If omitted, FIBA defaults apply."
+    },
+    "named_positions": {
+      "type": "object",
+      "description": "Position registry. Standard positions are defined by the spec per ruleset.",
+      "properties": {
+        "custom": {
+          "type": "object",
+          "description": "User-defined named positions. Reference in coords as 'custom.<name>'.",
+          "additionalProperties": { "$ref": "#/definitions/custom_position" }
+        }
+      },
+      "additionalProperties": false
+    },
+    "entities": {
+      "type": "array",
+      "description": "All entities present on the court. Defines their initial position (frame 0).",
+      "items": { "$ref": "#/definitions/entity" }
+    },
+    "frames": {
+      "type": "array",
+      "description": "Ordered sequence of drill steps. A static drill has exactly one frame. Animated drills have multiple frames with entity_states deltas.",
+      "minItems": 1,
+      "items": { "$ref": "#/definitions/frame" }
+    },
+    "areas": {
+      "type": "array",
+      "description": "Highlighted zones on the court (visible across all frames unless overridden).",
+      "items": { "$ref": "#/definitions/area" }
+    },
+    "labels": {
+      "type": "array",
+      "description": "Text labels on the court (visible across all frames).",
+      "items": { "$ref": "#/definitions/label" }
+    }
+  },
+  "additionalProperties": false
+};
+
+/**
+ * Create a blank OCF document.
+ */
+export function createBlankDocument(options = {}) {
+  const now = new Date().toISOString();
+  return {
+    meta: {
+      id: crypto.randomUUID ? crypto.randomUUID() : `ocf-${Date.now()}`,
+      title: options.title || 'New Drill',
+      description: options.description || '',
+      author: options.author || '',
+      tags: [],
+      difficulty: 'beginner',
+      created: now,
+      modified: now,
+      source_format: 'open',
+    },
+    court: {
+      ruleset: options.ruleset || 'fiba',
+      type: options.courtType || 'half_court',
+      drill_focus: options.drillFocus || 'offense',
+    },
+    entities: [],
+    frames: [
+      { id: 'frame_1', label: 'Step 1', lines: [] }
+    ],
+    areas: [],
+    labels: [],
+  };
+}

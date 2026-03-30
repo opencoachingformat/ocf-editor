@@ -1,0 +1,117 @@
+{
+  "meta": {
+    "id": "ocf-pick-and-roll-001",
+    "title": "Basic Pick & Roll",
+    "description": "A fundamental pick and roll play from the top of the key. The point guard uses a screen from the center to attack the basket.",
+    "author": "OCF Examples",
+    "tags": ["pick-and-roll", "fundamentals", "offense"],
+    "difficulty": "beginner",
+    "created": "2025-01-15T10:00:00Z",
+    "modified": "2025-01-15T10:00:00Z",
+    "source_format": "open"
+  },
+  "court": {
+    "ruleset": "fiba",
+    "type": "half_court",
+    "drill_focus": "offense"
+  },
+  "entities": [
+    { "type": "offense", "nr": 1, "x": 0.0, "y": 5.0 },
+    { "type": "offense", "nr": 2, "x": -6.0, "y": 8.5 },
+    { "type": "offense", "nr": 3, "x": 6.0, "y": 8.5 },
+    { "type": "offense", "nr": 4, "x": -2.5, "y": 11.0 },
+    { "type": "offense", "nr": 5, "x": 0.0, "y": 8.2 },
+    { "type": "defense", "nr": 1, "x": 0.0, "y": 6.0, "rotation": 180 },
+    { "type": "defense", "nr": 5, "x": 0.5, "y": 9.0, "rotation": 180 },
+    { "type": "ball", "x": 0.3, "y": 4.8 }
+  ],
+  "frames": [
+    {
+      "id": "frame_1",
+      "label": "Initial Setup",
+      "description": "1 has the ball at the top. 5 is at the free throw line ready to set the screen.",
+      "lines": []
+    },
+    {
+      "id": "frame_2",
+      "label": "Screen Set",
+      "description": "5 moves up to set a screen on 1's defender.",
+      "entity_states": {
+        "offense_5": { "x": 0.5, "y": 6.5 }
+      },
+      "lines": [
+        {
+          "type": "movement",
+          "from_entity": "offense_5",
+          "coords": [
+            { "x": 0.0, "y": 8.2 },
+            { "x": 0.5, "y": 6.5 }
+          ]
+        },
+        {
+          "type": "screen",
+          "from_entity": "offense_5",
+          "coords": [
+            { "x": 0.5, "y": 6.5 },
+            { "x": 0.5, "y": 5.5 }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "frame_3",
+      "label": "Drive & Roll",
+      "description": "1 drives off the screen toward the basket. 5 rolls to the basket.",
+      "entity_states": {
+        "offense_1": { "x": 2.0, "y": 10.0 },
+        "offense_5": { "x": -1.5, "y": 11.5 },
+        "ball": { "x": 2.3, "y": 9.8 },
+        "defense_1": { "x": 1.5, "y": 8.0 },
+        "defense_5": { "x": -0.5, "y": 10.0 }
+      },
+      "lines": [
+        {
+          "type": "dribbling",
+          "from_entity": "offense_1",
+          "to_entity": "offense_1",
+          "coords": [
+            { "x": 0.0, "y": 5.0 },
+            { "x": 1.5, "y": 7.0 },
+            { "x": 2.0, "y": 10.0 }
+          ]
+        },
+        {
+          "type": "movement",
+          "from_entity": "offense_5",
+          "to_entity": "offense_5",
+          "coords": [
+            { "x": 0.5, "y": 6.5 },
+            { "x": -1.0, "y": 9.0 },
+            { "x": -1.5, "y": 11.5 }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "frame_4",
+      "label": "Finish",
+      "description": "1 passes to 5 for the layup, or finishes at the rim.",
+      "entity_states": {
+        "offense_1": { "x": 2.5, "y": 11.0 },
+        "offense_5": { "x": -0.5, "y": 12.0 },
+        "ball": { "x": -0.3, "y": 11.8 }
+      },
+      "lines": [
+        {
+          "type": "passing",
+          "from_entity": "offense_1",
+          "to_entity": "offense_5",
+          "coords": [
+            { "x": 2.0, "y": 10.0 },
+            { "x": -0.5, "y": 12.0 }
+          ]
+        }
+      ]
+    }
+  ]
+}

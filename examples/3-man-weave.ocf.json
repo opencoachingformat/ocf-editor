@@ -1,0 +1,144 @@
+{
+  "meta": {
+    "id": "ocf-3-man-weave-001",
+    "title": "3-Man Weave",
+    "description": "Classic full-court 3-man weave passing drill. Players pass and go behind the receiver.",
+    "author": "OCF Examples",
+    "tags": ["transition", "passing", "conditioning", "teamwork"],
+    "difficulty": "beginner",
+    "created": "2025-01-15T10:00:00Z",
+    "modified": "2025-01-15T10:00:00Z",
+    "source_format": "open"
+  },
+  "court": {
+    "ruleset": "fiba",
+    "type": "full_court",
+    "drill_focus": "transition"
+  },
+  "entities": [
+    { "type": "offense", "nr": 1, "x": 0.0, "y": -13.0 },
+    { "type": "offense", "nr": 2, "x": -4.0, "y": -13.0 },
+    { "type": "offense", "nr": 3, "x": 4.0, "y": -13.0 },
+    { "type": "ball", "x": 0.3, "y": -12.8 }
+  ],
+  "frames": [
+    {
+      "id": "frame_1",
+      "label": "Start",
+      "description": "Three players lined up on the baseline. 1 has the ball in the middle.",
+      "lines": []
+    },
+    {
+      "id": "frame_2",
+      "label": "First Pass",
+      "description": "1 passes to 2 on the left wing and cuts behind 2.",
+      "entity_states": {
+        "offense_1": { "x": -5.0, "y": -5.0 },
+        "offense_2": { "x": -2.0, "y": -6.0 },
+        "offense_3": { "x": 4.0, "y": -7.0 },
+        "ball": { "x": -1.8, "y": -5.8 }
+      },
+      "lines": [
+        {
+          "type": "passing",
+          "from_entity": "offense_1",
+          "to_entity": "offense_2",
+          "coords": [
+            { "x": 0.0, "y": -13.0 },
+            { "x": -2.0, "y": -6.0 }
+          ]
+        },
+        {
+          "type": "movement",
+          "from_entity": "offense_1",
+          "curved": true,
+          "coords": [
+            { "x": 0.0, "y": -13.0 },
+            { "x": -3.5, "y": -8.0 },
+            { "x": -5.0, "y": -5.0 }
+          ]
+        },
+        {
+          "type": "movement",
+          "from_entity": "offense_3",
+          "coords": [
+            { "x": 4.0, "y": -13.0 },
+            { "x": 4.0, "y": -7.0 }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "frame_3",
+      "label": "Second Pass",
+      "description": "2 passes to 3 and cuts behind. Players weave up the court.",
+      "entity_states": {
+        "offense_1": { "x": -5.0, "y": 0.0 },
+        "offense_2": { "x": 5.0, "y": 2.0 },
+        "offense_3": { "x": 2.0, "y": 0.0 },
+        "ball": { "x": 2.2, "y": 0.2 }
+      },
+      "lines": [
+        {
+          "type": "passing",
+          "from_entity": "offense_2",
+          "to_entity": "offense_3",
+          "coords": [
+            { "x": -2.0, "y": -6.0 },
+            { "x": 2.0, "y": 0.0 }
+          ]
+        },
+        {
+          "type": "movement",
+          "from_entity": "offense_2",
+          "curved": true,
+          "coords": [
+            { "x": -2.0, "y": -6.0 },
+            { "x": 3.0, "y": -2.0 },
+            { "x": 5.0, "y": 2.0 }
+          ]
+        },
+        {
+          "type": "movement",
+          "from_entity": "offense_1",
+          "coords": [
+            { "x": -5.0, "y": -5.0 },
+            { "x": -5.0, "y": 0.0 }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "frame_4",
+      "label": "Finish — Layup",
+      "description": "3 passes to 1 cutting to the basket for a layup.",
+      "entity_states": {
+        "offense_1": { "x": 0.0, "y": 12.0 },
+        "offense_2": { "x": 5.0, "y": 8.0 },
+        "offense_3": { "x": -3.0, "y": 7.0 },
+        "ball": { "x": 0.2, "y": 11.8 }
+      },
+      "lines": [
+        {
+          "type": "passing",
+          "from_entity": "offense_3",
+          "to_entity": "offense_1",
+          "coords": [
+            { "x": 2.0, "y": 0.0 },
+            { "x": 0.0, "y": 12.0 }
+          ]
+        },
+        {
+          "type": "movement",
+          "from_entity": "offense_1",
+          "curved": true,
+          "coords": [
+            { "x": -5.0, "y": 0.0 },
+            { "x": -2.0, "y": 6.0 },
+            { "x": 0.0, "y": 12.0 }
+          ]
+        }
+      ]
+    }
+  ]
+}
