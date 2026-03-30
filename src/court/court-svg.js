@@ -104,16 +104,20 @@ export function createTransform(ruleset, courtType, svgWidth, svgHeight) {
 
   const courtW = xMax - xMin;
   const courtH = yMax - yMin;
-  // Padding in court units (small visual margin outside boundary)
-  const pad = dims.unit === 'm' ? 0.4 : 1.3;
+  // Padding in court units (visual margin outside boundary).
+  // For half-court the midcourt edge needs extra room for the center circle arc.
+  const padSmall = dims.unit === 'm' ? 0.4 : 1.3;
+  const ccR = COURT_DETAILS[ruleset]?.centerCircleR ?? padSmall;
+  const padBottom = courtType === 'half_court' ? ccR + padSmall : padSmall;
 
-  const totalW = courtW + pad * 2;
-  const totalH = courtH + pad * 2;
+  const totalW = courtW + padSmall * 2;
+  const totalH = courtH + padSmall + padBottom;  // top=padSmall, bottom=padBottom
 
   const scale = Math.min(svgWidth / totalW, svgHeight / totalH);
 
   const offsetX = (svgWidth  - courtW * scale) / 2;
-  const offsetY = (svgHeight - courtH * scale) / 2;
+  // top offset = padSmall * scale; center the court vertically with correct top pad
+  const offsetY = padSmall * scale;
 
   return {
     toSvg(cx, cy) {
@@ -224,11 +228,11 @@ function drawHalfCourt(t, d, hw, hl, LC, LW, paintFill, mirror) {
     const ftR = t.toSvg( d.ftRadius, ftLineY);
 
     if (mirror) {
-      // Backcourt: solid half faces upward in SVG (toward midcourt), sweep=0 solid
+      // Backcourt: solid toward baseline (downward in SVG = sweep=0), dashed toward midcourt
       svg += `<path d="M ${f(ftL.x)},${f(ftL.y)} A ${f(ftr)},${f(ftr)} 0 0,0 ${f(ftR.x)},${f(ftR.y)}" fill="none" stroke="${LC}" stroke-width="${LW}"/>`;
       svg += `<path d="M ${f(ftL.x)},${f(ftL.y)} A ${f(ftr)},${f(ftr)} 0 0,1 ${f(ftR.x)},${f(ftR.y)}" fill="none" stroke="${LC}" stroke-width="${LW}" stroke-dasharray="5,4"/>`;
     } else {
-      // Frontcourt: solid half faces downward in SVG (toward baseline), sweep=1 solid
+      // Frontcourt: solid toward baseline (upward in SVG = sweep=1), dashed toward midcourt
       svg += `<path d="M ${f(ftL.x)},${f(ftL.y)} A ${f(ftr)},${f(ftr)} 0 0,1 ${f(ftR.x)},${f(ftR.y)}" fill="none" stroke="${LC}" stroke-width="${LW}"/>`;
       svg += `<path d="M ${f(ftL.x)},${f(ftL.y)} A ${f(ftr)},${f(ftr)} 0 0,0 ${f(ftR.x)},${f(ftR.y)}" fill="none" stroke="${LC}" stroke-width="${LW}" stroke-dasharray="5,4"/>`;
     }

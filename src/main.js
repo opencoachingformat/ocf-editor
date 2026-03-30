@@ -156,14 +156,26 @@ export function init() {
 }
 
 const CANVAS_W = 700;
-const CANVAS_H = 560;  // half_court; full_court uses 2× height
 
 function resizeSVG() {
   // No-op: SVG uses viewBox + CSS width/height:100% for responsive scaling.
 }
 
 function canvasHeight(doc) {
-  return (doc?.court?.type === 'full_court') ? CANVAS_H * 2 : CANVAS_H;
+  // Mirror the padding logic from createTransform so viewBox fits exactly.
+  const ruleset = doc?.court?.ruleset || 'fiba';
+  const courtType = doc?.court?.type || 'half_court';
+  // Court dimensions
+  const dimMap = { fiba:{hw:7.5,hl:14.0,unit:'m'}, nba:{hw:25,hl:47,unit:'ft'}, ncaa:{hw:25,hl:47,unit:'ft'}, nfhs:{hw:25,hl:42,unit:'ft'} };
+  const ccMap  = { fiba:1.8, nba:6, ncaa:6, nfhs:6 };
+  const dim = dimMap[ruleset] || dimMap.fiba;
+  const padSmall = dim.unit === 'm' ? 0.4 : 1.3;
+  const ccR = ccMap[ruleset] ?? padSmall;
+  const courtH = courtType === 'full_court' ? dim.hl * 2 : dim.hl;
+  const padBottom = courtType === 'half_court' ? ccR + padSmall : padSmall;
+  const totalW = dim.hw * 2 + padSmall * 2;
+  const totalH = courtH + padSmall + padBottom;
+  return Math.round(CANVAS_W * totalH / totalW);
 }
 
 // --- Render ---
