@@ -19,11 +19,20 @@ jobs:
       - run: npm ci
       - run: npm run build
       - run: node scripts/validate-examples.js
+
+      - name: Assemble Pages artifact
+        if: github.ref == 'refs/heads/main'
+        run: |
+          mkdir -p _site
+          cp index.html style.css ocf-bundle.js ocf-bundle.js.map _site/
+          cp -r examples _site/examples
+          cp opencoachingformat-v1.schema.json _site/
+
       - name: Upload Pages artifact
         if: github.ref == 'refs/heads/main'
         uses: actions/upload-pages-artifact@v3
         with:
-          path: '.'
+          path: '_site'
 
   deploy:
     name: Deploy to GitHub Pages

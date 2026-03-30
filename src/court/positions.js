@@ -117,12 +117,12 @@ const POSITION_REGISTRIES = {
   nfhs: NFHS_POSITIONS,
 };
 
-/** Court dimensions per ruleset */
+/** Court dimensions per ruleset. NBA/NCAA/NFHS values are in feet (unit: 'ft'). */
 export const COURT_DIMENSIONS = {
-  fiba: { unit: 'm',  length: 28.0, width: 15.0, basketFromBaseline: 1.575, halfLength: 14.0, halfWidth: 7.5 },
-  nba:  { unit: 'ft', length: 94.0, width: 50.0, basketFromBaseline: 5.25,  halfLength: 47.0, halfWidth: 25.0 },
-  ncaa: { unit: 'ft', length: 94.0, width: 50.0, basketFromBaseline: 5.25,  halfLength: 47.0, halfWidth: 25.0 },
-  nfhs: { unit: 'ft', length: 84.0, width: 50.0, basketFromBaseline: 5.25,  halfLength: 42.0, halfWidth: 25.0 },
+  fiba: { unit: 'm',  length: 28.0,  width: 15.0,  basketFromBaseline: 1.575, halfLength: 14.0,   halfWidth: 7.5  },
+  nba:  { unit: 'ft', length: 94.0,  width: 50.0,  basketFromBaseline: 5.25,  halfLength: 47.0,   halfWidth: 25.0 },
+  ncaa: { unit: 'ft', length: 94.0,  width: 50.0,  basketFromBaseline: 5.25,  halfLength: 47.0,   halfWidth: 25.0 },
+  nfhs: { unit: 'ft', length: 84.0,  width: 50.0,  basketFromBaseline: 5.25,  halfLength: 42.0,   halfWidth: 25.0 },
 };
 
 /** Snap radius per unit type */
