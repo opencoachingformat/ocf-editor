@@ -152,25 +152,27 @@ export function init() {
   renderEditor();
   updateJSON();
 
-  // Handle window resize
-  window.addEventListener('resize', () => {
-    resizeSVG();
-    if (currentMode === 'editor') renderEditor();
-    else renderViewer();
-  });
+  // viewBox-based scaling — no resize recalculation needed.
 }
 
+const CANVAS_W = 700;
+const CANVAS_H = 560;  // half_court; full_court uses 2× height
+
 function resizeSVG() {
-  const rect = svgContainer.getBoundingClientRect();
-  svgEl.setAttribute('width', rect.width);
-  svgEl.setAttribute('height', rect.height);
+  // No-op: SVG uses viewBox + CSS width/height:100% for responsive scaling.
+}
+
+function canvasHeight(doc) {
+  return (doc?.court?.type === 'full_court') ? CANVAS_H * 2 : CANVAS_H;
 }
 
 // --- Render ---
 
 function renderEditor() {
-  const w = parseFloat(svgEl.getAttribute('width')) || 700;
-  const h = parseFloat(svgEl.getAttribute('height')) || 600;
+  const w = CANVAS_W;
+  const h = canvasHeight(editorState.doc);
+  svgEl.setAttribute('viewBox', `0 0 ${w} ${h}`);
+  svgEl.setAttribute('preserveAspectRatio', 'xMidYMid meet');
   const { svgContent, transform } = renderOCF(editorState.doc, editorState.currentFrameIndex, w, h);
   currentTransform = transform;
 
@@ -209,9 +211,12 @@ function renderEditor() {
 }
 
 function renderViewer() {
-  const w = parseFloat(svgEl.getAttribute('width')) || 700;
-  const h = parseFloat(svgEl.getAttribute('height')) || 600;
-  const { svgContent, transform } = renderOCF(player.doc || editorState.doc, player.currentFrame, w, h);
+  const doc = player.doc || editorState.doc;
+  const w = CANVAS_W;
+  const h = canvasHeight(doc);
+  svgEl.setAttribute('viewBox', `0 0 ${w} ${h}`);
+  svgEl.setAttribute('preserveAspectRatio', 'xMidYMid meet');
+  const { svgContent, transform } = renderOCF(doc, player.currentFrame, w, h);
   currentTransform = transform;
   svgEl.innerHTML = svgContent;
   updatePlayerControls();
