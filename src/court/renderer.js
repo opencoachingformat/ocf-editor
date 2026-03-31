@@ -256,13 +256,14 @@ function renderPlayer(pos, transform, scheme) {
     svg += `<text x="${svgPos.x}" y="${svgPos.y}" text-anchor="middle" dominant-baseline="central" fill="${scheme.offense_stroke}" font-size="13" font-weight="bold" font-family="Arial, sans-serif">${e.nr}</text>`;
   } else if (e.type === 'defense') {
     const fill = e.color ? getColor(e.color, scheme) : scheme.defense_fill;
-    // Defense: arc + inner circle
+    // Defense: standard Ω symbol — filled circle + two legs below
     svg += `<circle cx="${svgPos.x}" cy="${svgPos.y}" r="${r + 2}" fill="white" opacity="0.9"/>`;
-    // Outer arc (defense symbol)
-    const arcR = r + 1;
-    svg += `<path d="M ${svgPos.x - arcR},${svgPos.y + arcR * 0.5} C ${svgPos.x - arcR},${svgPos.y - arcR * 1.2} ${svgPos.x + arcR},${svgPos.y - arcR * 1.2} ${svgPos.x + arcR},${svgPos.y + arcR * 0.5}" fill="none" stroke="${fill}" stroke-width="2.5"/>`;
-    // Inner circle
-    svg += `<circle cx="${svgPos.x}" cy="${svgPos.y}" r="${r * 0.7}" fill="${fill}" stroke="${scheme.defense_stroke}" stroke-width="1"/>`;
+    svg += `<circle cx="${svgPos.x}" cy="${svgPos.y}" r="${r}" fill="${fill}" stroke="${fill}" stroke-width="1"/>`;
+    const legSpread = r * 0.55;
+    const legTop    = svgPos.y + r * 0.85;
+    const legBot    = svgPos.y + r * 1.5;
+    svg += `<line x1="${svgPos.x - legSpread}" y1="${legTop}" x2="${svgPos.x - legSpread}" y2="${legBot}" stroke="${fill}" stroke-width="2" stroke-linecap="round"/>`;
+    svg += `<line x1="${svgPos.x + legSpread}" y1="${legTop}" x2="${svgPos.x + legSpread}" y2="${legBot}" stroke="${fill}" stroke-width="2" stroke-linecap="round"/>`;
     svg += `<text x="${svgPos.x}" y="${svgPos.y}" text-anchor="middle" dominant-baseline="central" fill="${scheme.defense_stroke}" font-size="11" font-weight="bold" font-family="Arial, sans-serif">${e.nr}</text>`;
   } else if (e.type === 'coach') {
     svg += `<circle cx="${svgPos.x}" cy="${svgPos.y}" r="${r + 2}" fill="white" opacity="0.9"/>`;
