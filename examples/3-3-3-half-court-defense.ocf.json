@@ -20,9 +20,9 @@
     { "type": "defense", "nr": 1, "x": -0.02, "y":  5.60 },
     { "type": "defense", "nr": 2, "x":  4.30, "y":  7.95 },
     { "type": "defense", "nr": 3, "x": -3.53, "y":  8.20 },
-    { "type": "offense", "nr": 4, "x":  7.20, "y":  1.06, "color": "green" },
-    { "type": "offense", "nr": 5, "x": -7.20, "y":  1.07, "color": "green" },
-    { "type": "offense", "nr": 6, "x": -7.20, "y":  8.95, "color": "green" },
+    { "type": "offense", "nr": 4, "x":  8.20, "y":  1.06, "color": "green" },
+    { "type": "offense", "nr": 5, "x": -8.20, "y":  1.07, "color": "green" },
+    { "type": "offense", "nr": 6, "x": -8.20, "y":  8.95, "color": "green" },
     { "type": "coach",              "x":  0.77, "y":  0.93 },
     { "type": "ball",               "x":  0.83, "y":  4.49 }
   ],
@@ -52,9 +52,9 @@
       "description": "After stop or defensive rebound: Defense outlet pass to Coach. Offense becomes new Defense. Old Defense exits. Coach passes to waiting players (green) who become the new Offense.",
       "lines": [
         { "type": "passing",  "from_entity": "defense_1", "coords": [{"x": -1.63, "y": 10.77}, {"x": 0.77, "y": 0.93}] },
-        { "type": "movement", "from_entity": "offense_4", "coords": [{"x":  7.20, "y": 1.06}, {"x": 6.15, "y": 2.06}] },
-        { "type": "movement", "from_entity": "offense_5", "coords": [{"x": -7.20, "y": 1.07}, {"x": -5.00, "y": 4.00}, {"x": -2.77, "y": 10.40}] },
-        { "type": "movement", "from_entity": "offense_6", "coords": [{"x": -7.20, "y": 8.95}, {"x": -2.77, "y": 10.40}] }
+        { "type": "movement", "from_entity": "offense_4", "coords": [{"x":  8.20, "y": 1.06}, {"x": 6.15, "y": 2.06}] },
+        { "type": "movement", "curved": true, "from_entity": "offense_5", "coords": [{"x": -8.20, "y": 1.07}, {"x": -5.00, "y": 4.00}, {"x": -2.77, "y": 10.40}] },
+        { "type": "movement", "from_entity": "offense_6", "coords": [{"x": -8.20, "y": 8.95}, {"x": -2.77, "y": 10.40}] }
       ]
     }
   ]

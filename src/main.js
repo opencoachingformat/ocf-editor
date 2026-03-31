@@ -169,7 +169,7 @@ function canvasHeight(doc) {
   const dimMap = { fiba:{hw:7.5,hl:14.0,unit:'m'}, nba:{hw:25,hl:47,unit:'ft'}, ncaa:{hw:25,hl:47,unit:'ft'}, nfhs:{hw:25,hl:42,unit:'ft'} };
   const ccMap  = { fiba:1.8, nba:6, ncaa:6, nfhs:6 };
   const dim = dimMap[ruleset] || dimMap.fiba;
-  const padSmall = dim.unit === 'm' ? 0.4 : 1.3;
+  const padSmall = dim.unit === 'm' ? 1.0 : 3.5;
   const ccR = ccMap[ruleset] ?? padSmall;
   const courtH = courtType === 'full_court' ? dim.hl * 2 : dim.hl;
   const padBottom = courtType === 'half_court' ? ccR + padSmall : padSmall;

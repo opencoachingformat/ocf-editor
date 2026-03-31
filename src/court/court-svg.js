@@ -106,7 +106,7 @@ export function createTransform(ruleset, courtType, svgWidth, svgHeight) {
   const courtH = yMax - yMin;
   // Padding in court units (visual margin outside boundary).
   // For half-court the midcourt edge needs extra room for the center circle arc.
-  const padSmall = dims.unit === 'm' ? 0.4 : 1.3;
+  const padSmall = dims.unit === 'm' ? 1.0 : 3.5;
   const ccR = COURT_DETAILS[ruleset]?.centerCircleR ?? padSmall;
   const padBottom = courtType === 'half_court' ? ccR + padSmall : padSmall;
 
