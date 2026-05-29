@@ -3,7 +3,17 @@
  */
 
 import { resolveEntityPositions, entityKey } from '../court/renderer.js';
-import { findSnapPosition } from '../court/positions.js';
+import { findSnapPosition, resolveCoordinate } from '../court/positions.js';
+
+/** Shortest distance from point p to line segment a–b (in pixels). */
+function distToSegment(p, a, b) {
+  const dx = b.x - a.x, dy = b.y - a.y;
+  const lenSq = dx * dx + dy * dy;
+  let t = lenSq === 0 ? 0 : ((p.x - a.x) * dx + (p.y - a.y) * dy) / lenSq;
+  t = Math.max(0, Math.min(1, t));
+  const cx = a.x + t * dx, cy = a.y + t * dy;
+  return Math.hypot(p.x - cx, p.y - cy);
+}
 
 export class InteractionManager {
   constructor(svgElement, editorState, getTransform) {
@@ -63,6 +73,34 @@ export class InteractionManager {
       }
     }
     return closest;
+  }
+
+  /** Find which line (in the current frame) is at a given SVG position. */
+  _hitTestLine(svgX, svgY) {
+    const t = this.getTransform();
+    if (!t) return null;
+    const frame = this.state.doc.frames[this.state.currentFrameIndex];
+    if (!frame || !frame.lines) return null;
+    const ruleset = this.state.doc.court?.ruleset || 'fiba';
+    const customPos = this.state.doc.named_positions?.custom || {};
+    const threshold = 8; // hit distance in pixels
+    let best = null;
+    let bestDist = threshold;
+
+    for (let i = 0; i < frame.lines.length; i++) {
+      const pts = (frame.lines[i].coords || []).map(c => {
+        const abs = resolveCoordinate(c, ruleset, customPos);
+        return t.toSvg(abs.x, abs.y);
+      });
+      for (let s = 0; s + 1 < pts.length; s++) {
+        const d = distToSegment({ x: svgX, y: svgY }, pts[s], pts[s + 1]);
+        if (d < bestDist) {
+          bestDist = d;
+          best = i;
+        }
+      }
+    }
+    return best;
   }
 
   _onMouseDown(e) {
@@ -160,8 +198,13 @@ export class InteractionManager {
       const hitKey = this._hitTestEntity(svgPt.x, svgPt.y);
       if (hitKey) {
         this.state.select(hitKey);
+        return;
+      }
+      // No entity hit — try lines, otherwise deselect.
+      const lineIdx = this._hitTestLine(svgPt.x, svgPt.y);
+      if (lineIdx !== null) {
+        this.state.selectLine(lineIdx);
       } else if (!this.dragging || !this.dragging?.hasMoved) {
-        // Check if we clicked a line (approximate)
         this.state.deselect();
       }
     }
@@ -188,11 +231,14 @@ export class InteractionManager {
   }
 
   _onContextMenu(e) {
+    // Suppress the browser menu and instead select the entity so the
+    // floating action menu (with its Delete button) appears. Right-click no
+    // longer deletes immediately, which was surprising and destructive.
     e.preventDefault();
     const svgPt = this._svgPoint(e);
     const hitKey = this._hitTestEntity(svgPt.x, svgPt.y);
     if (hitKey) {
-      this.state.removeEntity(hitKey);
+      this.state.select(hitKey);
     }
   }
 
@@ -228,7 +274,8 @@ export class InteractionManager {
         entity = { type: 'station', nr: this.state.nextEntityNr('station'), x, y };
         break;
     }
-    if (entity) this.state.addEntity(entity);
+    // nextEntityNr returns null when the numbered slots are exhausted.
+    if (entity && entity.nr !== null) this.state.addEntity(entity);
   }
 
   _onKeyDown(e) {
@@ -287,6 +334,10 @@ export class InteractionManager {
       this.snapIndicator.setAttribute('stroke-width', '2');
       this.snapIndicator.setAttribute('stroke-dasharray', '3,2');
       this.snapIndicator.setAttribute('pointer-events', 'none');
+    }
+    // renderEditor() resets svg.innerHTML on every move, detaching the
+    // indicator — re-append it whenever it is not currently in the DOM.
+    if (!this.snapIndicator.isConnected) {
       this.svg.appendChild(this.snapIndicator);
     }
     this.snapIndicator.setAttribute('cx', svgPt.x);

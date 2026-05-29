@@ -5,7 +5,8 @@
 
 import { renderOCF, resolveEntityPositions, entityKey } from './court/renderer.js';
 import { createTransform } from './court/court-svg.js';
-import { straightPath } from './court/curves.js';
+import { straightPath, curvedPath } from './court/curves.js';
+import { resolveCoordinate } from './court/positions.js';
 import { FramePlayer } from './player/player.js';
 import { EditorState } from './editor/editor.js';
 import { Palette } from './editor/palette.js';
@@ -198,6 +199,29 @@ function renderEditor() {
     if (pos && transform) {
       const svgPos = transform.toSvg(pos.x, pos.y);
       overlay += `<circle cx="${svgPos.x}" cy="${svgPos.y}" r="18" fill="none" stroke="#00aaff" stroke-width="2" stroke-dasharray="4,3" pointer-events="none"/>`;
+    }
+  }
+
+  // Selected line highlight
+  if (editorState.selectedLineIndex !== null && transform) {
+    const frame = editorState.doc.frames[editorState.currentFrameIndex];
+    const line = frame?.lines?.[editorState.selectedLineIndex];
+    if (line) {
+      const ruleset = editorState.doc.court?.ruleset || 'fiba';
+      const customPos = editorState.doc.named_positions?.custom || {};
+      const pts = (line.coords || []).map(c => {
+        const abs = resolveCoordinate(c, ruleset, customPos);
+        return transform.toSvg(abs.x, abs.y);
+      });
+      if (pts.length >= 2) {
+        const d = line.curved ? curvedPath(pts) : straightPath(pts);
+        if (d) {
+          overlay += `<path d="${d}" fill="none" stroke="#00aaff" stroke-width="6" stroke-opacity="0.35" stroke-linecap="round" stroke-linejoin="round" pointer-events="none"/>`;
+        }
+        for (const pt of pts) {
+          overlay += `<circle cx="${pt.x}" cy="${pt.y}" r="4" fill="#00aaff" pointer-events="none"/>`;
+        }
+      }
     }
   }
 
