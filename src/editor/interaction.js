@@ -27,9 +27,12 @@ export class InteractionManager {
   }
 
   _bindEvents() {
-    this.svg.addEventListener('mousedown', (e) => this._onMouseDown(e));
-    this.svg.addEventListener('mousemove', (e) => this._onMouseMove(e));
-    this.svg.addEventListener('mouseup', (e) => this._onMouseUp(e));
+    // Pointer events cover mouse, touch and pen with one code path, so dragging
+    // works on phones/tablets as well as desktop.
+    this.svg.addEventListener('pointerdown', (e) => this._onPointerDown(e));
+    this.svg.addEventListener('pointermove', (e) => this._onPointerMove(e));
+    this.svg.addEventListener('pointerup', (e) => this._onPointerUp(e));
+    this.svg.addEventListener('pointercancel', (e) => this._onPointerUp(e));
     this.svg.addEventListener('click', (e) => this._onClick(e));
     this.svg.addEventListener('dblclick', (e) => this._onDoubleClick(e));
     this.svg.addEventListener('contextmenu', (e) => this._onContextMenu(e));
@@ -42,7 +45,21 @@ export class InteractionManager {
     document.addEventListener('keydown', (e) => this._onKeyDown(e));
   }
 
+  /**
+   * Convert a pointer/mouse event to viewBox coordinates. Uses the SVG's screen
+   * CTM so it is correct at any rendered size — the SVG is scaled to 100% width,
+   * so on small screens client pixels do NOT equal viewBox units.
+   */
   _svgPoint(e) {
+    const ctm = this.svg.getScreenCTM && this.svg.getScreenCTM();
+    if (ctm) {
+      const pt = this.svg.createSVGPoint();
+      pt.x = e.clientX;
+      pt.y = e.clientY;
+      const local = pt.matrixTransform(ctm.inverse());
+      return { x: local.x, y: local.y };
+    }
+    // Fallback: assume 1:1 mapping (only correct when rendered at viewBox size).
     const rect = this.svg.getBoundingClientRect();
     return { x: e.clientX - rect.left, y: e.clientY - rect.top };
   }
@@ -103,7 +120,7 @@ export class InteractionManager {
     return best;
   }
 
-  _onMouseDown(e) {
+  _onPointerDown(e) {
     if (e.button !== 0) return;
     if (this.state.activeTool !== 'select') return;
 
@@ -122,6 +139,9 @@ export class InteractionManager {
           offsetY: svgPt.y - eSvg.y,
           hasMoved: false,
         };
+        // Capture so the drag keeps tracking even if the finger/cursor leaves
+        // the entity (or the SVG re-renders under it).
+        try { this.svg.setPointerCapture(e.pointerId); } catch (_) { /* ignore */ }
         this.state.saveUndo();
         this.state.select(hitKey);
         e.preventDefault();
@@ -129,7 +149,7 @@ export class InteractionManager {
     }
   }
 
-  _onMouseMove(e) {
+  _onPointerMove(e) {
     if (!this.dragging) return;
     const svgPt = this._svgPoint(e);
     const t = this.getTransform();
@@ -153,17 +173,28 @@ export class InteractionManager {
       this._hideSnapIndicator();
     }
     this.dragging.hasMoved = true;
+    e.preventDefault();
   }
 
-  _onMouseUp(e) {
+  _onPointerUp(e) {
     if (this.dragging) {
+      this._dragMoved = this.dragging.hasMoved;
       this._hideSnapIndicator();
       this.dragging = null;
+      try { this.svg.releasePointerCapture(e.pointerId); } catch (_) { /* ignore */ }
     }
   }
 
   _onClick(e) {
     const tool = this.state.activeTool;
+
+    // A click is synthesized after a drag (pointerup). If the drag actually
+    // moved the entity, swallow this click so it does not re-run hit testing
+    // (which could deselect after the token has moved away from the tap point).
+    if (this._dragMoved) {
+      this._dragMoved = false;
+      return;
+    }
 
     // Line drawing mode
     if (tool.startsWith('line_')) {

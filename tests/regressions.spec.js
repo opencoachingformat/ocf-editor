@@ -23,17 +23,20 @@ function paletteBtn(page, label) {
   return page.locator('.palette-item .pal-label', { hasText: label }).locator('..');
 }
 
-/** Convert a court coordinate to a client (screen) point over the SVG.
- *  Mirrors InteractionManager._svgPoint: the handler reads `clientX - rect.left`
- *  and feeds it straight into the viewBox-based transform, so a viewBox unit maps
- *  to (box.x + svgX) regardless of any CSS scaling. */
+/** Convert a court coordinate to a client (viewport) point over the SVG, using
+ *  the SVG screen CTM — correct at any rendered size (the court scales to 100%
+ *  width, so client pixels do not equal viewBox units). */
 async function courtToClient(page, courtX, courtY) {
-  const svg = await page.evaluate(([cx, cy]) => {
+  return await page.evaluate(([cx, cy]) => {
+    const svg = document.getElementById('court-svg');
     const t = window.OCFEditor.getCurrentTransform();
-    return t.toSvg(cx, cy);
+    const v = t.toSvg(cx, cy); // viewBox coords
+    const pt = svg.createSVGPoint();
+    pt.x = v.x;
+    pt.y = v.y;
+    const s = pt.matrixTransform(svg.getScreenCTM()); // -> client coords
+    return { x: s.x, y: s.y };
   }, [courtX, courtY]);
-  const box = await page.locator('#court-svg').boundingBox();
-  return { x: box.x + svg.x, y: box.y + svg.y };
 }
 
 // ─── #1 Ball possession ───────────────────────────────────────────────────────
@@ -143,33 +146,39 @@ test.describe('Regression #3: snap indicator survives the per-move re-render', (
     await openEditor(page);
     await paletteBtn(page, 'Offense').click(); // fiba default: offense_1 at (0, 7)
 
-    // Drive the real InteractionManager handlers with synthetic mouse events so
-    // the sequence is deterministic. The handler reads `clientX - rect.left` and
-    // feeds it straight into the viewBox transform, so a viewBox unit maps to
-    // (rect.left + svgX). We snap onto two named positions in a row.
+    // Drive the real InteractionManager handlers with synthetic pointer events
+    // so the sequence is deterministic. We snap onto two named positions in a row.
     const result = await page.evaluate(() => {
       const svg = document.getElementById('court-svg');
       const t = window.OCFEditor.getCurrentTransform();
-      const rect = svg.getBoundingClientRect();
-      const fire = (type, c, buttons) => svg.dispatchEvent(new MouseEvent(type, {
+      const ctm = svg.getScreenCTM();
+      const toClient = (cx, cy) => {
+        const v = t.toSvg(cx, cy);
+        const p = svg.createSVGPoint();
+        p.x = v.x; p.y = v.y;
+        const s = p.matrixTransform(ctm);
+        return { x: s.x, y: s.y };
+      };
+      const fire = (type, c, buttons) => svg.dispatchEvent(new PointerEvent(type, {
         bubbles: true, cancelable: true, view: window,
-        clientX: rect.left + c.x, clientY: rect.top + c.y, button: 0, buttons,
+        pointerId: 1, pointerType: 'mouse', isPrimary: true,
+        clientX: c.x, clientY: c.y, button: 0, buttons,
       }));
       const isConnected = () => {
         const c = svg.querySelector('circle[stroke="#00cc66"]');
         return !!c && c.isConnected;
       };
 
-      const start = t.toSvg(0, 7);     // the player
-      const snap1 = t.toSvg(0, 8.2);   // free_throw_line (fiba)
-      const snap2 = t.toSvg(0, 5.68);  // top_of_the_key (fiba)
+      const start = toClient(0, 7);     // the player
+      const snap1 = toClient(0, 8.2);   // free_throw_line (fiba)
+      const snap2 = toClient(0, 5.68);  // top_of_the_key (fiba)
 
-      fire('mousedown', start, 1);
-      fire('mousemove', snap1, 1);     // first snap → indicator created + appended
+      fire('pointerdown', start, 1);
+      fire('pointermove', snap1, 1);    // first snap → indicator created + appended
       const afterFirst = isConnected();
-      fire('mousemove', snap2, 1);     // second snap → re-render wipes innerHTML
+      fire('pointermove', snap2, 1);    // second snap → re-render wipes innerHTML
       const afterSecond = isConnected();
-      fire('mouseup', snap2, 0);
+      fire('pointerup', snap2, 0);
 
       const player = window.OCFEditor.editorState.doc.entities.find(e => e.type === 'offense');
       return { afterFirst, afterSecond, movedTo: player.y };
@@ -227,5 +236,59 @@ test.describe('Regression: offense/defense numbering capped at 9', () => {
     expect(result.count).toBe(9);
     expect(result.next).toBeNull();
     expect(result.cone).toBe(1);
+  });
+});
+
+// ─── Mobile / touch ─────────────────────────────────────────────────────────────
+
+test.describe('Regression: touch dragging on a small screen', () => {
+  // Narrow viewport → the court SVG is scaled well below its 700-unit viewBox,
+  // and touch input is enabled. This guards both mobile fixes at once:
+  //   - pointer events (mouse-only handlers never fired for touch)
+  //   - CTM-based coordinate mapping (client px ≠ viewBox units when scaled)
+  test.use({ viewport: { width: 390, height: 844 }, hasTouch: true, isMobile: true });
+
+  test('an entity can be dragged with touch and lands at the right court spot', async ({ page }) => {
+    await openEditor(page);
+
+    // Add a player directly (avoids depending on the responsive sidebar layout).
+    await page.evaluate(() => {
+      window.OCFEditor.editorState.addEntity({ type: 'offense', nr: 1, x: 0, y: 7 });
+    });
+
+    const renderedWidth = await page.evaluate(
+      () => document.getElementById('court-svg').getBoundingClientRect().width,
+    );
+    expect(renderedWidth).toBeLessThan(700); // confirms the SVG is scaled down
+
+    const moved = await page.evaluate(() => {
+      const svg = document.getElementById('court-svg');
+      const t = window.OCFEditor.getCurrentTransform();
+      const ctm = svg.getScreenCTM();
+      const toClient = (cx, cy) => {
+        const v = t.toSvg(cx, cy);
+        const p = svg.createSVGPoint();
+        p.x = v.x; p.y = v.y;
+        const s = p.matrixTransform(ctm);
+        return { x: s.x, y: s.y };
+      };
+      const fire = (type, c, buttons) => svg.dispatchEvent(new PointerEvent(type, {
+        bubbles: true, cancelable: true, view: window,
+        pointerId: 1, pointerType: 'touch', isPrimary: true,
+        clientX: c.x, clientY: c.y, button: 0, buttons,
+      }));
+
+      const from = toClient(0, 7);    // on the player
+      const target = toClient(-3, 3); // empty spot, not a snap position
+      fire('pointerdown', from, 1);
+      fire('pointermove', target, 1);
+      fire('pointerup', target, 0);
+
+      const p = window.OCFEditor.editorState.doc.entities.find(e => e.type === 'offense');
+      return { x: p.x, y: p.y };
+    });
+
+    expect(moved.x).toBeCloseTo(-3, 1);
+    expect(moved.y).toBeCloseTo(3, 1);
   });
 });
