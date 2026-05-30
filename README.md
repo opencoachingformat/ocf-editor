@@ -2,7 +2,7 @@
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 [![Schema](https://img.shields.io/badge/Schema-v1.0.0-green.svg)](opencoachingformat-v1.schema.json)
-[![CI](https://github.com/opencoachingformat/editor/actions/workflows/ci.yml/badge.svg)](https://github.com/opencoachingformat/editor/actions/workflows/ci.yml)
+[![CI](https://github.com/opencoachingformat/ocf-editor/actions/workflows/ci.yml/badge.svg)](https://github.com/opencoachingformat/ocf-editor/actions/workflows/ci.yml)
 
 Reference web editor for the [Open Coaching Format](https://github.com/opencoachingformat/spec) — an open standard for basketball drill diagrams and animations.
 
@@ -29,8 +29,8 @@ Reference web editor for the [Open Coaching Format](https://github.com/opencoach
 ## Quick Start
 
 ```bash
-git clone https://github.com/opencoachingformat/editor.git
-cd editor
+git clone https://github.com/opencoachingformat/ocf-editor.git
+cd ocf-editor
 npm install
 npm run build
 # Open index.html in your browser

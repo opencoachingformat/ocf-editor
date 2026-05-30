@@ -3,13 +3,13 @@
   "version": "0.2.0",
   "description": "Reference web editor for the Open Coaching Format",
   "private": true,
-  "homepage": "https://opencoachingformat.github.io/editor",
+  "homepage": "https://opencoachingformat.github.io/ocf-editor",
   "repository": {
     "type": "git",
-    "url": "https://github.com/opencoachingformat/editor.git"
+    "url": "https://github.com/opencoachingformat/ocf-editor.git"
   },
   "bugs": {
-    "url": "https://github.com/opencoachingformat/editor/issues"
+    "url": "https://github.com/opencoachingformat/ocf-editor/issues"
   },
   "license": "MIT",
   "engines": {
