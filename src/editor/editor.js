@@ -4,7 +4,7 @@
  */
 
 import { createBlankDocument } from '../schema.js';
-import { entityKey } from '../court/renderer.js';
+import { entityKey, resolveEntityPositions } from '../court/renderer.js';
 
 const MAX_UNDO = 30;
 
@@ -142,13 +142,53 @@ export class EditorState {
     }
   }
 
-  /** Get next available number for a given entity type. */
+  /**
+   * Get next available number for a given entity type.
+   * offense/defense are capped at 9 (schema limit); returns null if full.
+   */
   nextEntityNr(type) {
     const existing = this.doc.entities.filter(e => e.type === type).map(e => e.nr || 0);
-    for (let i = 1; i <= 99; i++) {
+    const max = (type === 'offense' || type === 'defense') ? 9 : 99;
+    for (let i = 1; i <= max; i++) {
       if (!existing.includes(i)) return i;
     }
-    return existing.length + 1;
+    return null;
+  }
+
+  /**
+   * Assign ball possession to a player by moving the ball entity onto them.
+   * Creates the ball entity if it does not exist yet. Since there is only one
+   * ball, possession is inherently exclusive. Honors the current frame: on
+   * frame 0 the base position is updated, otherwise a frame delta is written.
+   */
+  assignBall(playerKey) {
+    const positions = resolveEntityPositions(this.doc, this.currentFrameIndex);
+    const target = positions.get(playerKey);
+    if (!target) return;
+    const round = (v) => Math.round(v * 100) / 100;
+
+    this.saveUndo();
+
+    // Ensure a ball entity exists (base position seeded from frame 0).
+    let ball = this.doc.entities.find(e => e.type === 'ball');
+    if (!ball) {
+      const base = resolveEntityPositions(this.doc, 0).get(playerKey) || target;
+      ball = { type: 'ball', x: round(base.x), y: round(base.y) };
+      this.doc.entities.push(ball);
+    }
+
+    // Place the ball on the player for the current frame.
+    if (this.currentFrameIndex === 0) {
+      ball.x = round(target.x);
+      ball.y = round(target.y);
+    } else {
+      const frame = this.doc.frames[this.currentFrameIndex];
+      if (frame) {
+        if (!frame.entity_states) frame.entity_states = {};
+        frame.entity_states['ball'] = { x: round(target.x), y: round(target.y) };
+      }
+    }
+    this.notify('ball-assign');
   }
 
   // --- Line Operations ---

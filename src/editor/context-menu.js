@@ -79,7 +79,7 @@ export class ContextMenu {
     this._ballBtn.appendChild(ballLabel);
     this._ballBtn.addEventListener('click', (e) => {
       e.stopPropagation();
-      this._toggleBall();
+      this._assignBall();
     });
 
     // Delete button
@@ -150,10 +150,17 @@ export class ContextMenu {
     this.menu.style.left = left + 'px';
     this.menu.style.top = top + 'px';
 
-    // Reflect has_ball state
-    const entity = this.state.doc.entities?.[entityKey];
-    if (this._ballBtn && entity) {
-      this._ballBtn.classList.toggle('active', !!entity.has_ball);
+    // Ball possession only applies to players. Reflect whether this player
+    // currently holds the ball (i.e. the ball entity sits on top of them).
+    if (this._ballBtn) {
+      const type = pos.entity?.type;
+      const isPlayer = type === 'offense' || type === 'defense' || type === 'coach';
+      this._ballBtn.style.display = isPlayer ? '' : 'none';
+      const ballPos = positions.get('ball');
+      const holds = isPlayer && ballPos
+        && Math.abs(ballPos.x - pos.x) < 0.01
+        && Math.abs(ballPos.y - pos.y) < 0.01;
+      this._ballBtn.classList.toggle('active', !!holds);
     }
   }
 
@@ -161,22 +168,11 @@ export class ContextMenu {
     this.menu.classList.add('hidden');
   }
 
-  _toggleBall() {
+  _assignBall() {
     const key = this.state.selectedEntityKey;
     if (!key) return;
-    const entity = this.state.doc.entities?.[key];
-    if (!entity) return;
-
-    this.state.saveUndo();
-    entity.has_ball = !entity.has_ball;
-
-    // Only one player can have the ball at a time
-    if (entity.has_ball) {
-      for (const [k, e] of Object.entries(this.state.doc.entities || {})) {
-        if (k !== key) e.has_ball = false;
-      }
-    }
-
-    this.state.notify('has-ball-changed');
+    // Possession is modeled by the ball entity's position (OCF has a single
+    // ball). assignBall creates/moves the ball onto the selected player.
+    this.state.assignBall(key);
   }
 }

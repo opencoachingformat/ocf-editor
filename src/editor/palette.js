@@ -73,7 +73,8 @@ export class Palette {
         entity = { type: 'station', nr: this.state.nextEntityNr('station'), x: pos.x + 2, y: pos.y };
         break;
     }
-    if (entity) this.state.addEntity(entity);
+    // nextEntityNr returns null when the numbered slots are exhausted.
+    if (entity && entity.nr !== null) this.state.addEntity(entity);
   }
 }
 
