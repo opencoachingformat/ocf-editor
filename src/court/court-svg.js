@@ -183,10 +183,12 @@ export function renderCourtSVG(ruleset, courtType, transform) {
 
     const cc  = t.toSvg(0, 0);
     const ccr = t.s(d.centerCircleR);
-    // Arc from left to right, sweeping AWAY from court (upward in SVG = sweep=0)
+    // Only the half that lies INSIDE the court is drawn (the half-court view cuts
+    // the circle at midcourt). That half bulges toward the basket = upward in
+    // SVG, which is sweep=1 going left→right.
     const L = t.toSvg(-d.centerCircleR, 0);
     const R = t.toSvg( d.centerCircleR, 0);
-    svg += `<path d="M ${f(L.x)},${f(L.y)} A ${f(ccr)},${f(ccr)} 0 0,0 ${f(R.x)},${f(R.y)}" fill="none" stroke="${LC}" stroke-width="${LW}"/>`;
+    svg += `<path d="M ${f(L.x)},${f(L.y)} A ${f(ccr)},${f(ccr)} 0 0,1 ${f(R.x)},${f(R.y)}" fill="none" stroke="${LC}" stroke-width="${LW}"/>`;
     svg += `<circle cx="${f(cc.x)}" cy="${f(cc.y)}" r="3" fill="${LC}"/>`;
   }
 
