@@ -63,6 +63,10 @@ reference implementation of the OCF format.
 
 ## 3. Context and Scope
 
+![Context diagram: Coach uses the OCF Editor SPA, which imports/exports .ocf.json files and validates against the embedded OCF schema](diagrams/context.png)
+
+<details><summary>Diagram source (Mermaid)</summary>
+
 ```mermaid
 flowchart LR
     coach(["Coach<br/>(browser)"])
@@ -75,6 +79,8 @@ flowchart LR
     file -->|import| editor
     editor -.->|validates against| schema
 ```
+
+</details>
 
 - **In scope:** the browser application, its rendering/editing/playback logic,
   the embedded schema and validator, examples, tests, and the CI/deploy pipeline.
@@ -96,6 +102,10 @@ flowchart LR
 ---
 
 ## 5. Building Block View
+
+![Building block view: main.js wires the editor UI, the court rendering modules, the player, export, the embedded schema, and EditorState as the single source of truth](diagrams/building-blocks.png)
+
+<details><summary>Diagram source (Mermaid)</summary>
 
 ```mermaid
 flowchart TD
@@ -143,6 +153,8 @@ flowchart TD
     exp --> json
 ```
 
+</details>
+
 ### Level 1 — modules (`src/`)
 
 | Module | Responsibility |
@@ -176,6 +188,10 @@ flowchart TD
 
 ### Editing an entity (drag)
 
+![Sequence diagram of an entity drag: pointerdown hit-tests and captures, each pointermove maps client to viewBox via the screen CTM, snaps, and moves the entity which notifies a re-render; pointerup releases and swallows the synthesized click](diagrams/runtime-drag.png)
+
+<details><summary>Diagram source (Mermaid)</summary>
+
 ```mermaid
 sequenceDiagram
     actor U as Coach
@@ -198,6 +214,8 @@ sequenceDiagram
     IM->>IM: releasePointerCapture
     Note over IM: swallow synthesized click after a real drag
 ```
+
+</details>
 
 1. `pointerdown` on the court → `InteractionManager` hit-tests entities (radius
    depends on pointer type) and starts a drag, capturing the pointer.
@@ -230,6 +248,10 @@ re-renders.
 
 Static site on **GitHub Pages**, assembled by `scripts/build-pages.sh`:
 
+![Deployment: the newest v* tag is built to the site root and current main is built to /preview, both published to one GitHub Pages site](diagrams/deployment.png)
+
+<details><summary>Diagram source (Mermaid)</summary>
+
 ```mermaid
 flowchart LR
     tag["newest v* tag"] -->|git archive → esbuild| root["/ (release build)"]
@@ -238,6 +260,8 @@ flowchart LR
     preview --> pages
 ```
 
+</details>
+
 - Both variants are rebuilt from their **own** git ref on every deploy
   (`git archive <ref>` → esbuild → copy static files → stamp version badge).
   This is possible only because the app has no runtime deps and uses relative
@@ -245,6 +269,10 @@ flowchart LR
 - Until the first `v*` tag exists, the root mirrors the preview build.
 
 ### CI pipeline (`.github/workflows/ci.yml`)
+
+![CI pipeline: a trigger runs build then test; tags also run version-check; deploy runs after tests on main pushes or v* tags](diagrams/ci-pipeline.png)
+
+<details><summary>Diagram source (Mermaid)</summary>
 
 ```mermaid
 flowchart TD
@@ -260,6 +288,8 @@ flowchart TD
     test -->|main push or v* tag| deploy
     vcheck --> deploy
 ```
+
+</details>
 
 | Job | Runs on | Purpose |
 |-----|---------|---------|
