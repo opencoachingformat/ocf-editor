@@ -63,14 +63,17 @@ reference implementation of the OCF format.
 
 ## 3. Context and Scope
 
-```
-            ┌─────────────────────────────────────────┐
-  Coach ───▶│              OCF Editor (SPA)            │───▶ .ocf.json file
- (browser)  │  court rendering · editing · playback    │◀─── .ocf.json file
-            └─────────────────────────────────────────┘
-                      │ validates against
-                      ▼
-            OCF v1.0.0 JSON Schema (embedded copy)
+```mermaid
+flowchart LR
+    coach(["Coach<br/>(browser)"])
+    editor["OCF Editor (SPA)<br/>court rendering · editing · playback"]
+    file[/".ocf.json file"/]
+    schema[["OCF v1.0.0 JSON Schema<br/>(embedded copy)"]]
+
+    coach -->|edits / views| editor
+    editor -->|export| file
+    file -->|import| editor
+    editor -.->|validates against| schema
 ```
 
 - **In scope:** the browser application, its rendering/editing/playback logic,
@@ -93,6 +96,52 @@ reference implementation of the OCF format.
 ---
 
 ## 5. Building Block View
+
+```mermaid
+flowchart TD
+    main["main.js<br/>entry point · app mode · OCFEditor global"]
+
+    subgraph ui["editor/ — UI"]
+        palette["palette.js"]
+        properties["properties.js"]
+        frames["frames.js"]
+        toolbar["toolbar.js"]
+        ctxmenu["context-menu.js"]
+        interaction["interaction.js<br/>pointer drag · hit-test · draw"]
+    end
+
+    state["editor.js<br/>EditorState<br/>(single source of truth + undo/redo)"]
+
+    subgraph court["court/ — rendering"]
+        renderer["renderer.js<br/>renderOCF()"]
+        courtsvg["court-svg.js<br/>createTransform()"]
+        curves["curves.js"]
+        positions["positions.js"]
+    end
+
+    player["player/player.js<br/>FramePlayer"]
+    schema["schema.js<br/>embedded schema"]
+
+    subgraph exp["export/"]
+        validate["validate.js"]
+        json["json.js"]
+    end
+
+    main --> ui
+    main --> state
+    main --> player
+    main --> renderer
+    ui --> state
+    state -.->|notify| ui
+    state --> schema
+    interaction --> renderer
+    renderer --> courtsvg
+    renderer --> curves
+    renderer --> positions
+    main --> exp
+    exp --> validate
+    exp --> json
+```
 
 ### Level 1 — modules (`src/`)
 
@@ -127,6 +176,29 @@ reference implementation of the OCF format.
 
 ### Editing an entity (drag)
 
+```mermaid
+sequenceDiagram
+    actor U as Coach
+    participant IM as InteractionManager
+    participant ES as EditorState
+    participant M as main.js (render)
+
+    U->>IM: pointerdown
+    IM->>IM: hit-test (radius by pointer type)
+    IM->>IM: setPointerCapture
+    IM->>ES: select(entity)
+    loop pointermove
+        IM->>IM: client→viewBox via screen CTM
+        IM->>IM: snap to named position?
+        IM->>ES: moveEntity(x, y)
+        ES-->>M: notify
+        M->>M: re-render SVG (+ re-append snap indicator)
+    end
+    U->>IM: pointerup
+    IM->>IM: releasePointerCapture
+    Note over IM: swallow synthesized click after a real drag
+```
+
 1. `pointerdown` on the court → `InteractionManager` hit-tests entities (radius
    depends on pointer type) and starts a drag, capturing the pointer.
 2. `pointermove` → convert client → viewBox coords via the SVG **screen CTM**,
@@ -158,10 +230,12 @@ re-renders.
 
 Static site on **GitHub Pages**, assembled by `scripts/build-pages.sh`:
 
-```
-GitHub Pages site
-├── /            → newest v* release tag   (the "final" build)
-└── /preview/    → current main            (the "test" build)
+```mermaid
+flowchart LR
+    tag["newest v* tag"] -->|git archive → esbuild| root["/ (release build)"]
+    main["current main"] -->|git archive → esbuild| preview["/preview/ (test build)"]
+    root --> pages[["GitHub Pages site"]]
+    preview --> pages
 ```
 
 - Both variants are rebuilt from their **own** git ref on every deploy
@@ -171,6 +245,21 @@ GitHub Pages site
 - Until the first `v*` tag exists, the root mirrors the preview build.
 
 ### CI pipeline (`.github/workflows/ci.yml`)
+
+```mermaid
+flowchart TD
+    trigger{{"trigger: PR · main push · v* tag"}}
+    build["build<br/>npm ci → build → validate examples"]
+    test["test<br/>Playwright E2E (chromium)"]
+    vcheck["version-check<br/>(tag only) package.json == tag"]
+    deploy["deploy<br/>assemble _site → GitHub Pages"]
+
+    trigger --> build
+    build --> test
+    trigger -->|tag only| vcheck
+    test -->|main push or v* tag| deploy
+    vcheck --> deploy
+```
 
 | Job | Runs on | Purpose |
 |-----|---------|---------|
