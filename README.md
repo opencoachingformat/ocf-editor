@@ -6,7 +6,13 @@
 
 Reference web editor for the [Open Coaching Format](https://github.com/opencoachingformat/spec) — an open standard for basketball drill diagrams and animations.
 
-**Live demo:** https://opencoachingformat.github.io/ocf-editor
+**Live demo (latest release):** https://opencoachingformat.github.io/ocf-editor
+**Preview (current `main`):** https://opencoachingformat.github.io/ocf-editor/preview/
+
+> The root URL serves the latest tagged release; `/preview/` always tracks the
+> current `main` and is redeployed on every merge (after CI passes). See
+> [Releases & Deployment](#releases--deployment). Architecture is documented in
+> [doc/arc42.md](doc/arc42.md).
 
 ---
 
