@@ -543,6 +543,9 @@ body {
   height: 100%;
   display: block;
   cursor: default;
+  /* Stop the browser from claiming touch gestures (scroll/pan/zoom) so that
+     pointermove is delivered for dragging entities instead of pointercancel. */
+  touch-action: none;
 }
 
 #svg-container.action-mode {

@@ -57,7 +57,11 @@ export class ContextMenu {
       btn.appendChild(label);
       btn.addEventListener('click', (e) => {
         e.stopPropagation();
-        this.state.setTool(tool.id);
+        // Start the line at the selected player so it becomes the first
+        // waypoint (e.g. dribble/pass begins from that player).
+        const key = this.state.selectedEntityKey;
+        if (key) this.state.startLineTool(tool.id, key);
+        else this.state.setTool(tool.id);
         this._hide();
       });
       toolGroup.appendChild(btn);

@@ -71,13 +71,17 @@ export class InteractionManager {
     return t.toCourt(svgPt.x, svgPt.y);
   }
 
-  /** Find which entity is at a given SVG position. */
-  _hitTestEntity(svgX, svgY) {
+  /**
+   * Find which entity is at a given position (in viewBox units).
+   * The radius is in viewBox units; since the court is scaled to fit, a touch
+   * needs a much larger radius than a mouse to be comfortable on a phone.
+   */
+  _hitTestEntity(svgX, svgY, radius = 22) {
     const t = this.getTransform();
     if (!t) return null;
     const positions = resolveEntityPositions(this.state.doc, this.state.currentFrameIndex);
     let closest = null;
-    let closestDist = 15; // hit radius in pixels
+    let closestDist = radius;
 
     for (const [key, pos] of positions) {
       const eSvg = t.toSvg(pos.x, pos.y);
@@ -120,12 +124,17 @@ export class InteractionManager {
     return best;
   }
 
+  /** Generous hit radius (viewBox units) for coarse pointers (finger) vs mouse. */
+  _hitRadius(e) {
+    return e && e.pointerType === 'touch' ? 42 : 22;
+  }
+
   _onPointerDown(e) {
     if (e.button !== 0) return;
     if (this.state.activeTool !== 'select') return;
 
     const svgPt = this._svgPoint(e);
-    const hitKey = this._hitTestEntity(svgPt.x, svgPt.y);
+    const hitKey = this._hitTestEntity(svgPt.x, svgPt.y, this._hitRadius(e));
 
     if (hitKey) {
       const t = this.getTransform();
