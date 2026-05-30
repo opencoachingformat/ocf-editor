@@ -292,3 +292,98 @@ test.describe('Regression: touch dragging on a small screen', () => {
     expect(moved.y).toBeCloseTo(3, 1);
   });
 });
+
+// ─── Mobile: touch-action + larger hit radius + dribble start ────────────────────
+
+test.describe('Regression: court allows touch dragging (touch-action)', () => {
+  test('the court SVG sets touch-action:none so the browser does not steal drags', async ({ page }) => {
+    await openEditor(page);
+    const ta = await page.evaluate(
+      () => getComputedStyle(document.getElementById('court-svg')).touchAction,
+    );
+    // Without this the browser treats a finger drag as scroll/pan and fires
+    // pointercancel, so entities could never be dragged on a phone.
+    expect(ta).toBe('none');
+  });
+});
+
+test.describe('Regression: generous touch hit radius', () => {
+  test.use({ viewport: { width: 390, height: 844 }, hasTouch: true, isMobile: true });
+
+  test('a finger tap slightly off the token still grabs and drags it', async ({ page }) => {
+    await openEditor(page);
+    await page.evaluate(() => {
+      window.OCFEditor.editorState.addEntity({ type: 'offense', nr: 1, x: 0, y: 7 });
+    });
+
+    const moved = await page.evaluate(() => {
+      const svg = document.getElementById('court-svg');
+      const t = window.OCFEditor.getCurrentTransform();
+      const ctm = svg.getScreenCTM();
+      const toClientVB = (vx, vy) => {
+        const p = svg.createSVGPoint();
+        p.x = vx; p.y = vy;
+        const s = p.matrixTransform(ctm);
+        return { x: s.x, y: s.y };
+      };
+      const center = t.toSvg(0, 7); // player center in viewBox units
+      // Tap 28 viewBox units away — outside the old 15-unit radius, inside the
+      // new 42-unit touch radius.
+      const tap = toClientVB(center.x + 28, center.y);
+      const target = toClientVB(center.x + 28 + 60, center.y); // drag right
+      const fire = (type, c, buttons) => svg.dispatchEvent(new PointerEvent(type, {
+        bubbles: true, cancelable: true, view: window,
+        pointerId: 1, pointerType: 'touch', isPrimary: true,
+        clientX: c.x, clientY: c.y, button: 0, buttons,
+      }));
+      fire('pointerdown', tap, 1);
+      fire('pointermove', target, 1);
+      fire('pointerup', target, 0);
+      const p = window.OCFEditor.editorState.doc.entities.find(e => e.type === 'offense');
+      return { x: p.x, y: p.y, selected: window.OCFEditor.editorState.selectedEntityKey };
+    });
+
+    expect(moved.selected).toBe('offense_1'); // the off-center tap still grabbed it
+    expect(moved.x).toBeGreaterThan(0.5);      // and it actually moved right
+  });
+});
+
+test.describe('Regression: drawing a line starts at the selected player', () => {
+  test('startLineTool seeds the player as the first waypoint', async ({ page }) => {
+    await openEditor(page);
+    const res = await page.evaluate(() => {
+      const s = window.OCFEditor.editorState;
+      s.addEntity({ type: 'offense', nr: 1, x: 2, y: 6 });
+      s.select('offense_1');
+      s.startLineTool('line_dribbling', 'offense_1');
+      return {
+        tool: s.activeTool,
+        first: s.lineWaypoints[0],
+        count: s.lineWaypoints.length,
+        from: s._lineFromEntity,
+      };
+    });
+    expect(res.tool).toBe('line_dribbling');
+    expect(res.count).toBe(1);
+    expect(res.first).toEqual({ x: 2, y: 6 });
+    expect(res.from).toBe('offense_1');
+  });
+
+  test('the context-menu Dribble button begins the line from that player', async ({ page }) => {
+    await openEditor(page);
+    await page.evaluate(() => {
+      const s = window.OCFEditor.editorState;
+      s.addEntity({ type: 'offense', nr: 1, x: -1, y: 5 });
+      s.select('offense_1');
+    });
+    // The floating action menu is shown for the selected player.
+    await page.locator('.ctx-menu .ctx-btn[data-tool="line_dribbling"]').click();
+    const res = await page.evaluate(() => {
+      const s = window.OCFEditor.editorState;
+      return { count: s.lineWaypoints.length, first: s.lineWaypoints[0], from: s._lineFromEntity };
+    });
+    expect(res.count).toBe(1);
+    expect(res.first).toEqual({ x: -1, y: 5 });
+    expect(res.from).toBe('offense_1');
+  });
+});

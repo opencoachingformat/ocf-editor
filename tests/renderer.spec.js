@@ -93,4 +93,26 @@ test.describe('court + lines', () => {
     ).svgContent;
     expect(svg).toMatch(/stroke-dasharray="6,4"/);
   });
+
+  test('half-court center-circle arc bulges into the court (not outside it)', () => {
+    // The half-court view cuts the center circle at the midcourt line; only the
+    // half lying inside the court should be drawn. Locate the arc by its
+    // endpoints sitting on the midcourt line (court y=0) and assert it bulges
+    // toward the basket (smaller SVG y = into the court).
+    const { svgContent, transform } = renderOCF(doc([]), 0, 700, 760);
+    const midY = transform.toSvg(0, 0).y; // midcourt line in SVG coords
+
+    // Every "M x1,y1 A rx,ry 0 large,sweep x2,y2" arc in the output.
+    const arcs = [...svgContent.matchAll(
+      /M\s*([\d.]+),([\d.]+)\s*A\s*[\d.]+,[\d.]+\s+0\s+\d+,(\d)\s+([\d.]+),([\d.]+)/g,
+    )].map(m => ({
+      y1: +m[2], sweep: m[3], y2: +m[5],
+    }));
+
+    // The center-circle arc: both endpoints lie on the midcourt line.
+    const cc = arcs.find(a => Math.abs(a.y1 - midY) < 0.5 && Math.abs(a.y2 - midY) < 0.5);
+    expect(cc, 'expected a center-circle arc on the midcourt line').toBeTruthy();
+    // sweep=1 makes a left→right arc bulge upward (into the court) in SVG coords.
+    expect(cc.sweep).toBe('1');
+  });
 });

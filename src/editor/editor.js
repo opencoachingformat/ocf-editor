@@ -301,6 +301,29 @@ export class EditorState {
   setTool(tool) {
     this.activeTool = tool;
     this.lineWaypoints = [];
+    this._lineFromEntity = undefined;
+    this._lineToEntity = undefined;
+    this.notify('tool');
+  }
+
+  /**
+   * Activate a line tool that starts at a given entity. The entity's current
+   * position becomes the first waypoint (so e.g. "Dribble" started on a player
+   * draws from that player), which is the intuitive behavior.
+   */
+  startLineTool(tool, entityKey) {
+    this.activeTool = tool;
+    this.lineWaypoints = [];
+    this._lineFromEntity = undefined;
+    this._lineToEntity = undefined;
+    const pos = resolveEntityPositions(this.doc, this.currentFrameIndex).get(entityKey);
+    if (pos) {
+      this.lineWaypoints.push({
+        x: Math.round(pos.x * 100) / 100,
+        y: Math.round(pos.y * 100) / 100,
+      });
+      this._lineFromEntity = entityKey;
+    }
     this.notify('tool');
   }
 
