@@ -6,3 +6,4 @@ ocf-bundle.js.map
 .idea/
 playwright-report/
 test-results/
+_site/

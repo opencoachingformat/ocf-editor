@@ -56,6 +56,30 @@ OCF (Open Coaching Format) is a JSON-based standard for basketball drill diagram
 
 This editor intentionally deviates from the spec in two places for `ajv` strict-mode compatibility — see the comment block at the top of `src/schema.js` for details.
 
+## Releases & Deployment
+
+GitHub Pages hosts two builds side by side:
+
+- **`/`** (root) — the latest **release**, built from the newest `v*` tag.
+- **`/preview/`** — the current **`main`**, redeployed on every merge (after CI passes).
+
+Until the first release tag exists, the root mirrors the preview build.
+
+To cut a release:
+
+1. Bump `version` in `package.json` (and the `.app-version` badge in `index.html`).
+2. Commit and merge to `main`.
+3. Tag the merge commit and push the tag:
+   ```bash
+   git tag v0.3.0
+   git push origin v0.3.0
+   ```
+
+CI refuses to deploy a tag whose `package.json` version doesn't match it
+(`scripts/check-version.sh`). The Pages site is assembled by
+`scripts/build-pages.sh`, which you can run locally (`bash scripts/build-pages.sh`)
+to preview the exact deployed layout in `./_site`.
+
 ## Contributing
 
 See [CONTRIBUTING.md](CONTRIBUTING.md).
