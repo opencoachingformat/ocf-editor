@@ -256,25 +256,20 @@ function renderPlayer(pos, transform, scheme) {
     svg += `<text x="${svgPos.x}" y="${svgPos.y}" text-anchor="middle" dominant-baseline="central" fill="${scheme.offense_stroke}" font-size="13" font-weight="bold" font-family="Arial, sans-serif">${e.nr}</text>`;
   } else if (e.type === 'defense') {
     const fill = e.color ? getColor(e.color, scheme) : scheme.defense_fill;
-    // Defense: FIBA-style symbol — horseshoe (open-top arc) + small inner circle
-    // Original FIBA path at scale 1 (width=40, height=24): outer arc + inner arc → closed horseshoe
-    // We scale to fit our radius r: scale = r*2/40 = r/20
-    const s = r / 20;
-    const n = (v) => Math.round(v * 10) / 10; // round to 1 decimal
     const cx = svgPos.x, cy = svgPos.y;
+    const n = (v) => Math.round(v * 10) / 10;
+    // White background for contrast.
     svg += `<circle cx="${cx}" cy="${cy}" r="${r + 2}" fill="white" opacity="0.9"/>`;
-    // Horseshoe: outer bezier arc + inner bezier arc (closed), centered at (cx, cy)
-    // Outer arc: M (cx-20s, cy+10s) C (cx-10s, cy-6s) (cx+10s, cy-6s) (cx+20s, cy+10s)
-    // Inner arc: C (cx+15s, cy-14s) (cx-15s, cy-14s) (cx-20s, cy+10s) Z
-    const ox1 = n(cx - 20*s), oy1 = n(cy + 10*s);
-    const ox2 = n(cx + 20*s), oy2 = n(cy + 10*s);
-    const oc1x = n(cx - 10*s), oc1y = n(cy - 6*s);
-    const oc2x = n(cx + 10*s), oc2y = n(cy - 6*s);
-    const ic1x = n(cx + 15*s), ic1y = n(cy - 14*s);
-    const ic2x = n(cx - 15*s), ic2y = n(cy - 14*s);
-    svg += `<path d="M ${ox1},${oy1} C ${oc1x},${oc1y} ${oc2x},${oc2y} ${ox2},${oy2} C ${ic1x},${ic1y} ${ic2x},${ic2y} ${ox1},${oy1} Z" fill="${fill}" stroke="none"/>`;
-    // Inner white circle
-    svg += `<circle cx="${cx}" cy="${cy}" r="${n(r * 0.45)}" fill="white" stroke="none"/>`;
+    // FIBA defender: a chunky horseshoe (open at the bottom) drawn as a single
+    // thick stroked arc — no self-intersecting fill — with the number inside.
+    const Rc = r * 0.72;                       // centerline radius of the band
+    const sw = Math.max(2.5, r * 0.42);        // band thickness
+    const gap = 52 * Math.PI / 180;            // half-angle of the bottom opening
+    const aStart = -Math.PI / 2 - gap;         // lower-left leg
+    const aEnd   = -Math.PI / 2 + gap;         // lower-right leg
+    const pt = (a) => `${n(cx + Rc * Math.cos(a))},${n(cy - Rc * Math.sin(a))}`;
+    // Major arc over the top: large-arc-flag=1, sweep-flag=1.
+    svg += `<path d="M ${pt(aStart)} A ${n(Rc)},${n(Rc)} 0 1 1 ${pt(aEnd)}" fill="none" stroke="${fill}" stroke-width="${n(sw)}" stroke-linecap="round"/>`;
     svg += `<text x="${cx}" y="${cy}" text-anchor="middle" dominant-baseline="central" fill="${fill}" font-size="11" font-weight="bold" font-family="Arial, sans-serif">${e.nr}</text>`;
   } else if (e.type === 'coach') {
     svg += `<circle cx="${svgPos.x}" cy="${svgPos.y}" r="${r + 2}" fill="white" opacity="0.9"/>`;
