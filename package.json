@@ -1,6 +1,6 @@
 {
   "name": "ocf-editor",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Reference web editor for the Open Coaching Format",
   "private": true,
   "homepage": "https://opencoachingformat.github.io/editor",
