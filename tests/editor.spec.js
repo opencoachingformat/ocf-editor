@@ -31,7 +31,7 @@ test.describe('App loads', () => {
   test('page title and version are correct', async ({ page }) => {
     await openEditor(page);
     await expect(page).toHaveTitle(/OCF Editor/);
-    await expect(page.locator('.app-version')).toHaveText('v0.2.0');
+    await expect(page.locator('.app-version')).toHaveText('v0.2.1');
   });
 
   test('court SVG is rendered (no 404 on bundle)', async ({ page }) => {

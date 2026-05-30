@@ -7,7 +7,7 @@ animations.
 
 > Status: living document. Last substantive update reflects work up to and
 > including the mobile-touch / rendering fixes and the release/preview CI
-> pipeline (app version `0.2.0`).
+> pipeline (app version `0.2.1`).
 
 ---
 
