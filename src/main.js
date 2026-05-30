@@ -21,11 +21,16 @@ import { exportJSON, importJSON, toJSONString } from './export/json.js';
 let currentMode = 'editor'; // 'editor' | 'viewer'
 let currentTransform = null;
 
+/** Current court transform (court units ↔ viewBox units). Exposed for tests. */
+export function getCurrentTransform() {
+  return currentTransform;
+}
+
 // --- Editor State ---
-const editorState = new EditorState({ ruleset: 'fiba', courtType: 'half_court', drillFocus: 'offense' });
+export const editorState = new EditorState({ ruleset: 'fiba', courtType: 'half_court', drillFocus: 'offense' });
 
 // --- Frame Player ---
-const player = new FramePlayer({
+export const player = new FramePlayer({
   onFrameChange: (idx) => {
     if (currentMode === 'viewer') renderViewer();
     updatePlayerControls();
