@@ -12,6 +12,9 @@
     "url": "https://github.com/opencoachingformat/editor/issues"
   },
   "license": "MIT",
+  "engines": {
+    "node": ">=22"
+  },
   "scripts": {
     "build": "esbuild src/main.js --bundle --outfile=ocf-bundle.js --format=iife --global-name=OCFEditor --sourcemap",
     "watch": "esbuild src/main.js --bundle --outfile=ocf-bundle.js --format=iife --global-name=OCFEditor --sourcemap --watch",
