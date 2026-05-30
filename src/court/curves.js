@@ -4,10 +4,14 @@
  */
 
 /**
- * Compute angle bisector control points for quadratic bezier interpolation.
- * For waypoints P0, P1, ..., Pn:
- * At each interior point Pi, compute angle bisector of incoming/outgoing vectors.
- * 
+ * Smooth quadratic spline through a set of waypoints.
+ *
+ * Each interior waypoint becomes the control point of a quadratic Bézier, and
+ * consecutive spans are joined at the segment midpoints so the curve passes
+ * smoothly *through* the waypoints and bulges toward them (the intuitive
+ * "outward" direction the author drew). The first span starts at P0 and the
+ * last span ends exactly on Pn, so endpoints are honored.
+ *
  * @param {Array<{x:number, y:number}>} points - Waypoints
  * @returns {string} SVG path data
  */
@@ -17,63 +21,18 @@ export function curvedPath(points) {
     return `M ${points[0].x},${points[0].y} L ${points[1].x},${points[1].y}`;
   }
 
+  const n = points.length;
   let d = `M ${points[0].x},${points[0].y}`;
 
-  for (let i = 1; i < points.length - 1; i++) {
-    const prev = points[i - 1];
-    const curr = points[i];
-    const next = points[i + 1];
-
-    // Vectors from curr to prev and curr to next
-    const v1x = prev.x - curr.x;
-    const v1y = prev.y - curr.y;
-    const v2x = next.x - curr.x;
-    const v2y = next.y - curr.y;
-
-    const len1 = Math.sqrt(v1x * v1x + v1y * v1y);
-    const len2 = Math.sqrt(v2x * v2x + v2y * v2y);
-
-    if (len1 === 0 || len2 === 0) {
-      d += ` L ${curr.x},${curr.y}`;
-      continue;
-    }
-
-    // Normalized vectors
-    const n1x = v1x / len1, n1y = v1y / len1;
-    const n2x = v2x / len2, n2y = v2y / len2;
-
-    // Bisector direction (pointing "outward" from the angle)
-    const bx = n1x + n2x;
-    const by = n1y + n2y;
-    const bLen = Math.sqrt(bx * bx + by * by);
-
-    if (bLen < 0.001) {
-      // Points are collinear, use straight line to midpoints
-      const mid1x = (prev.x + curr.x) / 2;
-      const mid1y = (prev.y + curr.y) / 2;
-      d += ` L ${mid1x},${mid1y} L ${curr.x},${curr.y}`;
-      continue;
-    }
-
-    // Control point offset along bisector
-    const controlDist = Math.min(len1, len2) * 0.3;
-    const cx = curr.x + (bx / bLen) * controlDist;
-    const cy = curr.y + (by / bLen) * controlDist;
-
-    // Midpoints for smooth transitions
-    const mid1x = (prev.x + curr.x) / 2;
-    const mid1y = (prev.y + curr.y) / 2;
-
-    if (i === 1) {
-      d += ` Q ${cx},${cy} ${curr.x},${curr.y}`;
-    } else {
-      d += ` Q ${cx},${cy} ${curr.x},${curr.y}`;
-    }
+  for (let i = 1; i < n - 1; i++) {
+    const ctrl = points[i];
+    // End each span at the midpoint to the next waypoint, except the final span
+    // which lands on the last point.
+    const end = (i === n - 2)
+      ? points[n - 1]
+      : { x: (points[i].x + points[i + 1].x) / 2, y: (points[i].y + points[i + 1].y) / 2 };
+    d += ` Q ${ctrl.x},${ctrl.y} ${end.x},${end.y}`;
   }
-
-  // Last segment
-  const last = points[points.length - 1];
-  d += ` L ${last.x},${last.y}`;
 
   return d;
 }
@@ -125,27 +84,21 @@ export function dribblingPath(points, scale = 1) {
   // Walk along path and create wave control points
   let d = `M ${points[0].x},${points[0].y}`;
   let walked = 0;
-  let segIdx = 0;
-  let segWalked = 0;
   let side = 1;
 
   for (let w = 0; w < numWaves; w++) {
     const halfTarget = walked + segLen / 2;
     const endTarget = walked + segLen;
 
-    // Find midpoint along path
+    // Midpoint of this wave, plus the tangent of whichever segment it lies on —
+    // so the perpendicular follows bends in the path instead of always using
+    // the first segment's direction.
     const mid = pointAlongPath(segments, halfTarget);
     const end = pointAlongPath(segments, endTarget);
 
-    // Direction at midpoint
-    const seg = segments[Math.min(segIdx, segments.length - 1)];
-    const dx = seg.to.x - seg.from.x;
-    const dy = seg.to.y - seg.from.y;
-    const len = Math.sqrt(dx * dx + dy * dy) || 1;
-
-    // Perpendicular
-    const px = -dy / len;
-    const py = dx / len;
+    // Perpendicular to the local tangent at the midpoint
+    const px = -mid.ty;
+    const py = mid.tx;
 
     const cx = mid.x + px * amplitude * side;
     const cy = mid.y + py * amplitude * side;
@@ -159,20 +112,27 @@ export function dribblingPath(points, scale = 1) {
 }
 
 /**
- * Find a point at a given distance along a series of segments.
+ * Find a point at a given distance along a series of segments, together with the
+ * unit tangent (tx, ty) of the segment it falls on.
  */
 function pointAlongPath(segments, distance) {
   let remaining = distance;
-  for (const seg of segments) {
+  for (let i = 0; i < segments.length; i++) {
+    const seg = segments[i];
     const dx = seg.to.x - seg.from.x;
     const dy = seg.to.y - seg.from.y;
     const len = Math.sqrt(dx * dx + dy * dy);
-    if (remaining <= len || seg === segments[segments.length - 1]) {
+    const tx = len > 0 ? dx / len : 0;
+    const ty = len > 0 ? dy / len : 0;
+    if (remaining <= len || i === segments.length - 1) {
       const t = len > 0 ? Math.min(remaining / len, 1) : 0;
-      return { x: seg.from.x + dx * t, y: seg.from.y + dy * t };
+      return { x: seg.from.x + dx * t, y: seg.from.y + dy * t, tx, ty };
     }
     remaining -= len;
   }
   const last = segments[segments.length - 1];
-  return { x: last.to.x, y: last.to.y };
+  const dx = last.to.x - last.from.x;
+  const dy = last.to.y - last.from.y;
+  const len = Math.sqrt(dx * dx + dy * dy) || 1;
+  return { x: last.to.x, y: last.to.y, tx: dx / len, ty: dy / len };
 }
