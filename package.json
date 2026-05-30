@@ -16,8 +16,8 @@
     "node": ">=22"
   },
   "scripts": {
-    "build": "esbuild src/main.js --bundle --outfile=ocf-bundle.js --format=iife --global-name=OCFEditor --sourcemap",
-    "watch": "esbuild src/main.js --bundle --outfile=ocf-bundle.js --format=iife --global-name=OCFEditor --sourcemap --watch",
+    "build": "node scripts/build.js",
+    "watch": "node scripts/build.js --watch",
     "validate-examples": "node scripts/validate-examples.js",
     "test": "npx playwright test",
     "test:ui": "npx playwright test --ui"

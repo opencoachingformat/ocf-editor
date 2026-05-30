@@ -4,6 +4,11 @@
  */
 
 import { test, expect } from '@playwright/test';
+import { readFileSync } from 'node:fs';
+
+// Single source of truth: the version the app should display comes from
+// package.json (injected into the bundle at build time by scripts/build.js).
+const { version } = JSON.parse(readFileSync('package.json', 'utf8'));
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
@@ -31,7 +36,7 @@ test.describe('App loads', () => {
   test('page title and version are correct', async ({ page }) => {
     await openEditor(page);
     await expect(page).toHaveTitle(/OCF Editor/);
-    await expect(page.locator('.app-version')).toHaveText('v0.2.1');
+    await expect(page.locator('.app-version')).toHaveText(`v${version}`);
   });
 
   test('court SVG is rendered (no 404 on bundle)', async ({ page }) => {

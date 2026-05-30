@@ -73,7 +73,8 @@ Until the first release tag exists, the root mirrors the preview build.
 
 To cut a release:
 
-1. Bump `version` in `package.json` (and the `.app-version` badge in `index.html`).
+1. Bump `version` in `package.json` — the only place it lives. The build injects
+   it into the in-app badge (`scripts/build.js`), and the E2E test derives it.
 2. Commit and merge to `main`.
 3. Tag the merge commit and push the tag:
    ```bash

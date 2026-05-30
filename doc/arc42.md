@@ -300,7 +300,8 @@ flowchart TD
 
 ### Release process
 
-1. Bump `version` in `package.json` and the `.app-version` badge in `index.html`.
+1. Bump `version` in `package.json` (single source — the build injects it into
+   the badge and the E2E test derives it).
 2. Merge to `main` (updates `/preview`).
 3. `git tag vX.Y.Z && git push origin vX.Y.Z` → version-check gate → deploy to root.
 
@@ -321,8 +322,11 @@ flowchart TD
   notifications; the singleton is reset in tests for order-independence.
 - **Validation.** Structural validator with no external deps; CI validates all
   `examples/*.ocf.json`.
-- **Versioning.** Version lives in `package.json`, the in-app badge, and the
-  version test; the CI gate keeps a release tag consistent with `package.json`.
+- **Versioning.** The version lives solely in `package.json`. `scripts/build.js`
+  injects it into the bundle at build time (esbuild `define` → `__APP_VERSION__`,
+  read from `$npm_package_version`), `main.js` writes it into the badge, and the
+  E2E test derives the expected value from `package.json`. The CI gate keeps a
+  release tag consistent with `package.json`.
 
 ---
 
