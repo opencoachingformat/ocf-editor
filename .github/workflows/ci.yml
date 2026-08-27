@@ -7,20 +7,16 @@ on:
   pull_request:
     branches: [main]
 
-# Allow one concurrent deployment; newer runs supersede in-progress ones.
-concurrency:
-  group: pages
-  cancel-in-progress: false
-
 jobs:
   build:
     name: Build & Validate
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     steps:
       - uses: actions/checkout@v7
       - uses: actions/setup-node@v7
         with:
-          node-version: '20'
+          node-version-file: '.nvmrc'
           cache: 'npm'
       - run: npm ci
       - run: npm run build
@@ -31,26 +27,45 @@ jobs:
     name: Version matches tag
     if: startsWith(github.ref, 'refs/tags/v')
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     steps:
       - uses: actions/checkout@v7
       - uses: actions/setup-node@v7
         with:
-          node-version: '20'
+          node-version-file: '.nvmrc'
       - run: bash scripts/check-version.sh "${GITHUB_REF_NAME}"
 
   test:
     name: E2E Tests
     runs-on: ubuntu-latest
     needs: build
+    timeout-minutes: 15
     steps:
       - uses: actions/checkout@v7
       - uses: actions/setup-node@v7
         with:
-          node-version: '20'
+          node-version-file: '.nvmrc'
           cache: 'npm'
       - run: npm ci
       - run: npm run build
-      - run: npx playwright install chromium --with-deps
+      # Cache the Playwright browser by its version so we don't re-download
+      # Chromium on every run (the download/apt step is the slowest and most
+      # stall-prone part of CI). On a cache hit we only install the system deps.
+      - name: Resolve Playwright version
+        id: pw
+        run: echo "version=$(node -p "require('@playwright/test/package.json').version")" >> "$GITHUB_OUTPUT"
+      - name: Cache Playwright browsers
+        id: pw-cache
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-${{ runner.os }}-${{ steps.pw.outputs.version }}
+      - name: Install Playwright (browser + system deps)
+        if: steps.pw-cache.outputs.cache-hit != 'true'
+        run: npx playwright install chromium --with-deps
+      - name: Install Playwright system deps (cached browser)
+        if: steps.pw-cache.outputs.cache-hit == 'true'
+        run: npx playwright install-deps chromium
       - run: npm test
 
   # Assemble the full Pages site (root = newest release tag, /preview = main)
@@ -60,6 +75,13 @@ jobs:
     needs: [build, test]
     if: github.event_name == 'push' && (github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/v'))
     runs-on: ubuntu-latest
+    timeout-minutes: 15
+    # Serialize deployments only (one Pages deploy at a time); queued deploys
+    # wait rather than cancel. Scoped to this job so a slow/stuck test run never
+    # blocks the whole CI pipeline.
+    concurrency:
+      group: pages
+      cancel-in-progress: false
     permissions:
       contents: read
       pages: write
@@ -74,7 +96,7 @@ jobs:
           fetch-depth: 0
       - uses: actions/setup-node@v7
         with:
-          node-version: '20'
+          node-version-file: '.nvmrc'
           cache: 'npm'
       - run: npm ci
       - name: Assemble Pages site (release + preview)

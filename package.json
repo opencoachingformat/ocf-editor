@@ -1,20 +1,23 @@
 {
   "name": "ocf-editor",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "description": "Reference web editor for the Open Coaching Format",
   "private": true,
-  "homepage": "https://opencoachingformat.github.io/editor",
+  "homepage": "https://opencoachingformat.github.io/ocf-editor",
   "repository": {
     "type": "git",
-    "url": "https://github.com/opencoachingformat/editor.git"
+    "url": "https://github.com/opencoachingformat/ocf-editor.git"
   },
   "bugs": {
-    "url": "https://github.com/opencoachingformat/editor/issues"
+    "url": "https://github.com/opencoachingformat/ocf-editor/issues"
   },
   "license": "MIT",
+  "engines": {
+    "node": ">=22"
+  },
   "scripts": {
-    "build": "esbuild src/main.js --bundle --outfile=ocf-bundle.js --format=iife --global-name=OCFEditor --sourcemap",
-    "watch": "esbuild src/main.js --bundle --outfile=ocf-bundle.js --format=iife --global-name=OCFEditor --sourcemap --watch",
+    "build": "node scripts/build.js",
+    "watch": "node scripts/build.js --watch",
     "validate-examples": "node scripts/validate-examples.js",
     "test": "npx playwright test",
     "test:ui": "npx playwright test --ui"

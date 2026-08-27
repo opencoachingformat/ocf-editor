@@ -58,6 +58,11 @@ export function init() {
   playerControlsEl = document.getElementById('player-controls');
   modeToggle = document.getElementById('mode-toggle');
 
+  // Show the app version, injected at build time from package.json (see
+  // scripts/build.js). Single source of truth — no hand-maintained copies.
+  const versionEl = document.querySelector('.app-version');
+  if (versionEl) versionEl.textContent = __APP_VERSION__;
+
   // Init UI components
   new Palette(paletteEl, editorState);
   new Toolbar(toolbarEl, editorState);

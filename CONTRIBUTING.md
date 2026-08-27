@@ -3,8 +3,8 @@
 ## Getting Started
 
 ```bash
-git clone https://github.com/opencoachingformat/editor.git
-cd editor
+git clone https://github.com/opencoachingformat/ocf-editor.git
+cd ocf-editor
 npm install
 npm run build
 open index.html
